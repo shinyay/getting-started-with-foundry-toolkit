@@ -4,6 +4,72 @@ The single contract between your code and Foundry. Everything `azd` does is deri
 
 ---
 
+## Field schema
+
+The annotated example below shows one *valid* manifest. This table is the **schema** — what
+each field accepts, whether you may omit it, and what happens if you do. Read this when you
+are writing a manifest by hand; read the example when you want to see one whole.
+
+> Types: `str`, `int`, `bool`, `map`, `list`. **Req** = required.
+> Enum values are the complete accepted set unless marked *(open)*.
+
+### Top level
+
+| Field | Type | Req | Default | Accepted values / notes |
+|---|---|---|---|---|
+| `name` | `str` | ✅ | — | Project name. Lowercase, hyphens. Also seeds resource names. |
+| `metadata.template` | `str` | ⬜ | — | Telemetry/provenance tag, e.g. `agent-framework-basic@1.0`. Free-form *(open)*. |
+| `requiredVersions.azd` | `str` | ⬜ | unconstrained | semver range, e.g. `>= 1.30.0`. See [below](#requiredversions--read-this-one). |
+| `infra.provider` | `str` | ⬜ | `microsoft.foundry` | `microsoft.foundry` \| `bicep` \| `terraform` |
+| `services` | `map` | ✅ | — | Keyed by **service name**. One entry per agent. |
+
+### `services.<name>`
+
+| Field | Type | Req | Default | Accepted values / notes |
+|---|---|---|---|---|
+| `host` | `str` | ✅ | — | `ai.agent` for hosted agents. The key that makes it a Foundry agent at all. |
+| `project` | `str` | ✅ | — | **Path to the source directory**, relative to `azure.yaml`. Must resolve or deploy fails. |
+| `language` | `str` | ✅ | — | `python` \| `dotnetCsharp` \| `typescript` \| `java` — **short forms** (≠ `runtime`) |
+| `name` | `str` | ⬜ | the service key | Remote agent name. Diverges from the key only if you set it. |
+| `description` | `str` | ⬜ | — | Shown in the portal and the agent card. |
+| `config` | `map` | ⬜ | — | Agent config block — see below. |
+
+### `services.<name>.config`
+
+| Field | Type | Req | Default | Accepted values / notes |
+|---|---|---|---|---|
+| `runtime` | `str` | ⬜ | inferred from `language` | **Full tokens**: `python_3_13`, `python_3_12`, `dotnet_9_0` … Not interchangeable with `language`. |
+| `protocols` | `list` | ⬜ | `[responses]` | `responses` \| `invocations` \| `activity` \| `invocations_ws` |
+| `instructions` | `str` | ⬜ | — | System prompt, for prompt-style config. |
+| `model` | `str` | ⬜ | — | Model deployment name. |
+| `environmentVariables` | `list` | ⬜ | `[]` | `- name: X` + `value: ${Y}`. **Never literal secrets.** |
+| `codeConfiguration` | `map` | ⬜ | — | See [`codeConfiguration`](#codeconfiguration). |
+| `container` | `map` | ⬜ | — | See [`container.resources`](#containerresources). |
+| `instance_identity` | `str`/`map` | ⬜ | shared identity | Per-agent managed identity. **snake_case** — remote-side field. |
+| `toolboxes` | `list` | ⬜ | `[]` | Toolbox references; each needs its endpoint env var set. |
+
+### `codeConfiguration`
+
+| Field | Type | Req | Default | Accepted values / notes |
+|---|---|---|---|---|
+| `entryPoint` | `str` | ⬜ | language default | e.g. `main.py`. |
+| `dependencyResolution` | `str` | ⬜ | `remote_build` | `remote_build` \| `local` — where dependencies are resolved. |
+
+### `container.resources`
+
+| Field | Type | Req | Default | Accepted values / notes |
+|---|---|---|---|---|
+| `cpu` | `str`/`num` | ⬜ | platform default | e.g. `"1"`. |
+| `memory` | `str` | ⬜ | platform default | e.g. `"2Gi"`. |
+
+> [!IMPORTANT]
+> The two fields most likely to break you are both **paths and tokens, not values**:
+> `services.<name>.project` must resolve on disk (a renamed directory silently breaks deploy),
+> and `language` vs `config.runtime` use **different vocabularies**. Everything else has a
+> forgiving default; these two do not.
+
+---
+
 ## Complete annotated example
 
 This is the **verified** manifest produced by `azd ai agent init` from the basic Python sample,

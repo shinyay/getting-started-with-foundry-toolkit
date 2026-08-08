@@ -145,3 +145,19 @@ azd down --force --purge
 ---
 
 👉 Next: [03 · MCP & Foundry Toolbox](../03-mcp-toolbox/) — tools you didn't write.
+
+---
+
+## Provenance
+
+This sample is **adapted from upstream**, not invented here. Exact mapping so you can diff it:
+
+| | |
+|---|---|
+| **Upstream path** | [`python/hosted-agents/agent-framework/responses/02-tools`](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/hosted-agents/agent-framework/responses/02-tools) |
+| **Upstream source dir** | `src/agent-framework-agent-with-local-tools-responses` |
+| **Source dir here** | `src/tools-agent` |
+| **Deviations** | `azure.yaml` reindented/reordered and renamed; source unchanged. |
+
+Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
+Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.

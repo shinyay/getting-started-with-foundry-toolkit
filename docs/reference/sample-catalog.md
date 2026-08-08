@@ -35,9 +35,19 @@ https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/
 | **Basic agent** | Agent Framework | `invocations` | `python/hosted-agents/agent-framework/invocations/01-basic` |
 | **Basic agent** | Agent Framework | `responses` | `python/hosted-agents/agent-framework/responses/01-basic` |
 | **Agent with Local Tools** | Agent Framework | `responses` | `python/hosted-agents/agent-framework/responses/02-tools` |
-| **Agent with MCP Tools** | Agent Framework | `responses` | `python/hosted-agents/agent-framework/responses/03-mcp` |
+| **Agent with MCP Tools** ⚠️ | Agent Framework | `responses` | `python/hosted-agents/agent-framework/responses/03-mcp` — **broken upstream, see note below** |
 | **Agent with Foundry Toolbox** | Agent Framework | `responses` | `python/hosted-agents/agent-framework/responses/04-foundry-toolbox` |
 | **Note-taking agent** | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/notetaking-agent` |
+
+> [!WARNING]
+> **`03-mcp` is advertised but does not exist upstream.** `azd ai agent sample list` returns it,
+> but `azd ai agent init --sample <its id>` fails and the upstream directory
+> `python/hosted-agents/agent-framework/responses/03-mcp` **404s** on GitHub. It is a stale
+> catalog entry. Use **`04-foundry-toolbox`** instead — that is the sample this repo's
+> [`samples/python/03-mcp-toolbox`](../../samples/python/03-mcp-toolbox/) is built from.
+>
+> This is a useful lesson in itself: **the catalog is a published index, not a guarantee.**
+> Always be ready for `init` to fail on an entry that `list` happily printed.
 
 ### Additional
 

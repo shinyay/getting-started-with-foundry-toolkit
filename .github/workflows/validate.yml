@@ -1,0 +1,83 @@
+name: validate
+
+# Keeps the repo honest without a human re-reading it. Three cheap checks:
+#   1. every relative markdown link resolves
+#   2. every YAML file parses
+#   3. every azure.yaml `project:` path actually exists on disk
+# (3) is the one that matters most — it is the exact defect class that shipped
+# a broken C# sample in the first place.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      - name: Check relative markdown links
+        run: |
+          python - <<'PY'
+          import glob, os, re, sys
+          bad = []
+          for f in glob.glob('**/*.md', recursive=True):
+              d = os.path.dirname(f)
+              for m in re.finditer(r'\[[^\]]*\]\(([^)#][^)]*)\)', open(f).read()):
+                  t = m.group(1).split('#')[0].strip()
+                  if not t or t.startswith(('http', 'mailto')):
+                      continue
+                  if not os.path.exists(os.path.normpath(os.path.join(d, t))):
+                      bad.append(f"{f} -> {t}")
+          for b in bad:
+              print(f"::error::broken link {b}")
+          print(f"{len(bad)} broken relative link(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check YAML parses
+        run: |
+          python - <<'PY'
+          import glob, sys, yaml
+          bad = []
+          for f in glob.glob('**/*.y*ml', recursive=True):
+              try:
+                  list(yaml.safe_load_all(open(f)))
+              except Exception as e:
+                  bad.append(f"{f}: {e}")
+          for b in bad:
+              print(f"::error::invalid YAML {b}")
+          print(f"{len(bad)} invalid YAML file(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check azure.yaml service paths resolve
+        run: |
+          python - <<'PY'
+          import glob, os, sys, yaml
+          bad = []
+          for f in glob.glob('samples/**/azure.yaml', recursive=True):
+              root = os.path.dirname(f)
+              doc = yaml.safe_load(open(f)) or {}
+              for name, svc in (doc.get('services') or {}).items():
+                  p = (svc or {}).get('project')
+                  if p and not os.path.isdir(os.path.join(root, p)):
+                      bad.append(f"{f}: service '{name}' project '{p}' does not exist")
+          for b in bad:
+              print(f"::error::{b}")
+          print(f"{len(bad)} unresolved service path(s)")
+          sys.exit(1 if bad else 0)
+          PY

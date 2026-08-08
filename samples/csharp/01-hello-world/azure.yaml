@@ -3,7 +3,7 @@
 requiredVersions:
   extensions:
     azure.ai.agents: '>=1.0.0-beta.4'
-name: hello-world-dotnet-agent-framework
+name: hello-world
 services:
   ai-project:
     host: azure.ai.project
@@ -16,7 +16,7 @@ services:
         sku:
           name: GlobalStandard
           capacity: 10
-  hello-world-dotnet-agent-framework:
+  hello-world:
     host: azure.ai.agent
     metadata:
       tags:
@@ -24,7 +24,7 @@ services:
         - Responses Protocol
         - Agent Framework
         - .NET
-    project: src/hello-world-dotnet-agent-framework
+    project: src/hello-world
     language: csharp
     codeConfiguration:
       runtime: dotnet_10
@@ -32,7 +32,7 @@ services:
     uses:
       - ai-project
     kind: hosted
-    name: hello-world-dotnet-agent-framework
+    name: hello-world
     displayName: Hello World (.NET, Agent Framework)
     description: Minimal Hello World agent using the Responses protocol with the Agent Framework approach in C#. Uses Microsoft.Agents.AI to create an AIAgent backed by a Foundry model, hosted via AgentHost.CreateBuilder() for automatic port, health, and telemetry configuration.
     protocols:

@@ -109,3 +109,19 @@ Tools run **inside your container** — nothing is registered with Foundry.
 ---
 
 👉 Next: [03 · MCP tools](../03-mcp-toolbox/)
+
+---
+
+## Provenance
+
+This sample is **adapted from upstream**, not invented here. Exact mapping so you can diff it:
+
+| | |
+|---|---|
+| **Upstream path** | [`csharp/hosted-agents/agent-framework/local-tools`](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/csharp/hosted-agents/agent-framework/local-tools) |
+| **Upstream source dir** | `src/local-tools` |
+| **Source dir here** | `src/local-tools` |
+| **Deviations** | `azure.yaml` reindented/reordered; directory name unchanged from upstream. |
+
+Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
+Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.

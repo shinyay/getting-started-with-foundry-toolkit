@@ -99,6 +99,50 @@ environmentVariables:
 azd env set TOOLBOX_ENDPOINT https://<your-toolbox-endpoint>
 ```
 
+But where does that endpoint come from? **You have to create the toolbox first** — it is a
+real Azure Foundry resource, not something `azd provision` makes for you. That is what the
+vendored `src/toolbox-agent/toolbox.yaml` is for.
+
+### Create the toolbox
+
+`toolbox.yaml` declares the tools that sit behind one endpoint: `web_search`,
+`code_interpreter`, and four MCP servers. Create it, then read back its endpoint:
+
+```bash
+cd src/toolbox-agent
+azd ai toolbox create agent-tools --from-file ./toolbox.yaml
+azd ai toolbox show agent-tools                 # prints the computed MCP endpoint
+azd env set TOOLBOX_ENDPOINT "<endpoint from show>"
+```
+
+> [!IMPORTANT]
+> `azd ai toolbox` lives in a **separate extension** (`azure.ai.toolboxes`) from
+> `azd ai agent` (`azure.ai.agents`). The first invocation prompts to install it:
+>
+> ```text
+> Command 'ai toolbox' was not found, but there's an available extension that provides it
+> Id: azure.ai.toolboxes   Name: Foundry Toolboxes (Beta)
+> ```
+>
+> See the [ecosystem map](../../../docs/reference/ecosystem.md) — `azd ai` has **four**
+> namespaces (`agent`, `inspector`, `project`, `toolbox`).
+
+> [!NOTE]
+> Toolbox versions are **immutable**. Adding or removing a connection creates a *new* version
+> and never changes which version is the default; promote one with
+> `azd ai toolbox publish <toolbox> <version>`. `azd ai toolbox versions` inspects them.
+
+Four of the six tools in `toolbox.yaml` need a **project connection** to exist first
+(`ghmcppat`, `langmcpconn`, `foundrymcpconn`). List what your project already has:
+
+```bash
+./scripts/list-foundry-connectors.sh        # or .ps1 on Windows
+```
+
+Trim `toolbox.yaml` down to the tools whose connections you actually have — `web_search`,
+`code_interpreter` and the no-auth `noauth_mcp` server need none, and are enough to see the
+concept work.
+
 If you omit it, `FoundryToolbox` falls back to `FOUNDRY_PROJECT_ENDPOINT` + `TOOLBOX_NAME`.
 
 Check your wiring before running:
@@ -158,3 +202,19 @@ azd down --force --purge
 ---
 
 👉 Next: [04 · Evaluation](../04-eval/) — is it actually any good?
+
+---
+
+## Provenance
+
+This sample is **adapted from upstream**, not invented here. Exact mapping so you can diff it:
+
+| | |
+|---|---|
+| **Upstream path** | [`python/hosted-agents/agent-framework/responses/04-foundry-toolbox`](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/hosted-agents/agent-framework/responses/04-foundry-toolbox) |
+| **Upstream source dir** | `src/agent-framework-agent-with-foundry-toolbox-responses` |
+| **Source dir here** | `src/toolbox-agent` |
+| **Deviations** | `azure.yaml` renamed and reordered. Directory numbered `03` here because upstream `03-mcp` **does not exist** — see [sample catalog](../../../docs/reference/sample-catalog.md). |
+
+Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
+Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.

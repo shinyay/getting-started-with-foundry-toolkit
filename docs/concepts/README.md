@@ -178,3 +178,9 @@ or add connections that need them.
 - 👉 [Setup](../setup/README.md) — get the tools installed
 - 👉 [CLI guide](../guide-cli/README.md) — the golden path, verified end to end
 - 👉 [GUI guide](../guide-gui/README.md) — the same journey in VS Code
+
+Once these six ideas are solid:
+
+- 👉 [**Multi-agent & A2A**](multi-agent.md) — the seventh idea: agents calling agents
+- 👉 [Glossary](../reference/glossary.md) — every term, cross-linked
+- 👉 [Identity & RBAC](../reference/identity-and-rbac.md) — the managed identity above, in depth

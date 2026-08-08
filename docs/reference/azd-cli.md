@@ -26,6 +26,39 @@ Available Commands:
   show        Show the status of a hosted agent.
 ```
 
+> [!IMPORTANT]
+> **`agent` is one of four `azd ai` namespaces.** This page documents `azd ai agent`, but the
+> toolkit is broader — and each namespace is a **separate extension** that azd offers to
+> install on first use:
+>
+> | Namespace | Extension | What it does |
+> |---|---|---|
+> | `azd ai agent` | `azure.ai.agents` | Scaffold, run, deploy, evaluate agents — this page |
+> | `azd ai project` | `azure.ai.projects` | Foundry project + model-deployment management |
+> | `azd ai inspector` | `azure.ai.inspector` | The local Agent Inspector UI (`:8087`) |
+> | `azd ai toolbox` | `azure.ai.toolboxes` | Toolboxes: versioned bundles of tools behind one MCP endpoint |
+>
+> Typing a command from a namespace you don't have installed does **not** fail — azd prints
+> `Command 'ai toolbox' was not found, but there's an available extension that provides it`
+> and offers to install it. Convenient interactively; a hard stop in CI, where you should
+> install extensions explicitly. See the [ecosystem map](./ecosystem.md).
+
+### `azd ai toolbox` at a glance
+
+| Command | Purpose |
+|---|---|
+| `toolbox create <name> --from-file <path>` | Create a toolbox and its **initial version** from JSON/YAML |
+| `toolbox show <name>` | Show a version, **including its computed MCP endpoint** |
+| `toolbox list` / `versions` | List toolboxes / inspect versions |
+| `toolbox publish` | Set the **default version** |
+| `toolbox connection` / `skill` | Manage connection-backed tools / skill references |
+| `toolbox delete` | Delete a toolbox or a single version |
+
+The shape matters: a toolbox is **versioned and immutable**, and `create` makes a version
+rather than a mutable object. Changing tools produces a *new* version; nothing switches over
+until you `publish` it. That is the same deploy-then-promote discipline agents themselves use,
+applied to tools. Worked example: [`samples/python/03-mcp-toolbox`](../../samples/python/03-mcp-toolbox/).
+
 ## Global flags
 
 | Flag | Meaning |
@@ -138,6 +171,32 @@ azd ai agent show
 azd ai agent show --output json
 ```
 
+Real output from a live deploy (`2026-08-08`, C# hello-world):
+
+```text
+FIELD                            VALUE
+-----                            -----
+ID                               hello-world:1
+Name                             hello-world
+Version                          1
+Status                           active
+Created At                       2026-08-08T07:45:06Z
+Agent GUID                       4e7e0e00-af5c-462b-a40b-09657fc5e964
+Instance Identity Principal ID   af65ac56-3c8b-4fc9-ba35-9cb1a37e52da
+Instance Identity Client ID      af65ac56-3c8b-4fc9-ba35-9cb1a37e52da
+Blueprint Principal ID           68c06f0f-7eee-48d0-8d6b-ddeb81f5c1bb
+Blueprint Client ID              6371fa08-38ff-483f-aadf-98edb2ecb0af
+Blueprint Reference Type         ManagedAgentIdentityBlueprint
+Blueprint Reference ID           hello-world-4e7e0
+Playground URL                   https://ai.azure.com/nextgen/r/...
+Endpoint (responses)             https://<account>.services.ai.azure.com/api/projects/<proj>/agents/hello-world/endpoint/protocols/openai/responses?api-version=v1
+```
+
+This is the **only** command that shows the agent's **instance identity** — the principal your
+container actually authenticates as, and the one you must grant roles to. `ID` is
+`<name>:<version>`; `Status` must read `active` before an invoke will succeed. See
+[identity & RBAC](./identity-and-rbac.md).
+
 > There is no `azd ai agent list`.
 
 ---
@@ -162,7 +221,35 @@ azd ai agent monitor -t system -l 200
 
 ## `doctor`
 
-13 checks across Local / Authentication / Remote. No flags. Run it first for any problem.
+13 checks across Local / Authentication / Remote. Run it first for any problem.
+
+| Flag | Purpose |
+|---|---|
+| `--local-only` | Skip remote (network-dependent) checks. Useful offline, behind a proxy, or for fast triage. |
+| `--unredacted` | Show raw principal IDs, scope ARNs, and UPNs. **Redacted by default** — pass this only when you need the real IDs, and never paste the output into an issue unredacted. |
+
+### Exit codes — the reason `doctor` is CI-usable
+
+`doctor` is not just a human report; it exits meaningfully, so it works as a pipeline gate:
+
+| Code | Meaning |
+|---|---|
+| `0` | At least one check passed and **none failed** |
+| `1` | **Any** check failed |
+| `2` | **All** checks were skipped (usually: nothing to check — wrong directory, or `--local-only` with everything remote) |
+
+Note the asymmetry: `2` is *not* "worse than 1". It means *nothing was actually evaluated*,
+which is arguably more dangerous in CI than a clean failure — a naive `if doctor; then` would
+treat it as non-zero and stop, but a `[ $? -eq 1 ]` check would sail past it. Prefer:
+
+```bash
+azd ai agent doctor --local-only
+case $? in
+  0) echo "healthy" ;;
+  1) echo "check failed"; exit 1 ;;
+  2) echo "nothing was checked — wrong cwd?"; exit 1 ;;
+esac
+```
 
 ---
 
@@ -223,15 +310,113 @@ azd ai agent sample list --language dotnetCsharp --output json
 
 ---
 
-## Other subcommands
+## The commands most guides never mention
+
+The five-line table this section used to be was the single biggest gap in this reference.
+`azd ai agent` exposes **15 top-level subcommands and 40 invocable commands**; the golden path
+uses about a third of them. The rest are where the day-2 work lives — and three of these
+families (`sessions`, `files`, `optimize`) have **no equivalent in the GUI at all**.
+
+### `sessions` — the conversation is a real, addressable resource
+
+A hosted agent does not just answer requests; it holds **sessions**, and a session has its own
+lifetime, its own filesystem, and its own ID. This is what makes stateful agents debuggable.
 
 | Command | Purpose |
 |---|---|
-| `code` | manage agent source code (preview) |
-| `endpoint` | agent endpoint + agent-card configuration |
-| `sessions` | list/manage sessions on a hosted endpoint |
-| `files` | manage files inside a hosted session |
-| `delete` | delete a hosted agent |
+| `sessions create [agent] [version]` | Open a session, optionally pinned to a **specific agent version** |
+| `sessions list` | List sessions for an agent |
+| `sessions show` | Details of one session |
+| `sessions stop` | Stop a running session |
+| `sessions delete` | Delete it |
+
+```bash
+azd ai agent sessions create my-agent 3          # pin the session to version 3
+azd ai agent sessions create --session-id my-session
+```
+
+> [!TIP]
+> Pinning a session to a version is the cleanest way to **A/B two agent versions** by hand:
+> create one session on `3`, one on `4`, and invoke both. No redeploy, no traffic-splitting.
+
+### `files` — a session has a filesystem
+
+| Command | Purpose |
+|---|---|
+| `files upload [agent] [file]` | Push a file into the session |
+| `files download [file]` | Pull one out |
+| `files list` / `files stat` | List / metadata |
+| `files mkdir` | Create a directory |
+| `files delete` | Remove a file or directory |
+
+```bash
+azd ai agent files upload ./data/input.csv --target-path /data/input.csv
+azd ai agent files download /data/output.csv --target-path ./output.csv
+```
+
+Most flags **auto-detect**: the agent is inferred when only one exists, and `--session-id`
+defaults to the **last invoke session** — so `upload` then `invoke` then `download` works with
+no IDs typed at all. That default is convenient and a trap: if you invoked something else in
+between, "the last session" is not the one you think.
+
+### `code download` — pull deployed source back out
+
+| Flag | Purpose |
+|---|---|
+| `--version` | Download a specific version instead of latest |
+| `--zip` | Save as a zip without extracting |
+| `-d, --dest` | Destination (default `./<agent-name>/`) |
+
+```bash
+azd ai agent code download my-agent --version 3
+azd ai agent code download my-agent --zip --dest ./backup
+```
+
+This is the recovery hatch for the classic "what is *actually* running in prod?" question, and
+a genuine answer to configuration drift — you can diff deployed source against your working
+tree. Marked **Preview**.
+
+### `optimize` — machine-improved instructions
+
+`optimize` runs a job that generates candidate agent instructions, scores them with evaluators,
+and lets you apply or deploy the winner.
+
+| Command | Purpose |
+|---|---|
+| `optimize` | Submit an optimization job |
+| `optimize status` / `list` | Check / list runs |
+| `optimize apply` | Apply the winning candidate **locally**, into your azd project |
+| `optimize deploy` | Deploy a winning candidate as a **new agent version** |
+| `optimize cancel` | Cancel a running job |
+
+| Key flag | Purpose |
+|---|---|
+| `-m, --eval-model` | Model used for evaluation (**required**) |
+| `--optimize-model` | Model doing the optimization reasoning — gpt-5 family recommended (**required**) |
+| `--evaluator` | Repeatable; built-in or custom evaluator name |
+| `--max-candidates` | Candidates to generate (default 5) |
+| `--no-wait` | Submit and return immediately |
+
+> [!IMPORTANT]
+> `optimize apply` writes into your project — the improved prompt lands in your **source tree**
+> so it can be reviewed and committed like any other change. That is the important design
+> choice: optimization output is a **pull request**, not a hidden server-side mutation.
+
+### `endpoint` — change the agent card without redeploying
+
+| Command | Purpose |
+|---|---|
+| `endpoint show` | Current endpoint + agent-card configuration |
+| `endpoint update [name] [--force]` | Update endpoint/card **without deploying a new version** |
+
+`--force` skips confirmation for **breaking changes** — meaning this command can break clients,
+which is why it asks. Relevant to A2A, where the agent card is how other agents discover you
+(see [multi-agent](../concepts/multi-agent.md)).
+
+### `delete`
+
+Deletes a hosted agent. Distinct from `azd down`, which destroys the whole environment's
+infrastructure.
 
 ---
 

@@ -95,7 +95,7 @@ SUCCESS: Extensions upgraded successfully
 ```
 </details>
 
-Confirm the three extensions:
+Confirm the extensions — `azure.ai.agents` pulls in three:
 
 ```bash
 azd extension list --installed --output json
@@ -106,6 +106,23 @@ azd extension list --installed --output json
 | `azure.ai.agents` | the `azd ai agent` command tree |
 | `azure.ai.inspector` | local Agent Inspector UI |
 | `azure.ai.projects` | Foundry project/model management (pulled in as a dependency) |
+
+> [!IMPORTANT]
+> **A fourth extension installs itself later.** `azure.ai.toolboxes` (Beta) is *not* part of
+> the `azure.ai.agents` bundle. The first time you run a `azd ai toolbox …` command, azd says:
+>
+> ```text
+> Command 'ai toolbox' was not found, but there's an available extension that provides it
+> Id: azure.ai.toolboxes   Name: Foundry Toolboxes (Beta)
+> ```
+>
+> …and offers to install it, so your extension list silently becomes **four**. That is fine
+> interactively but a failure in CI, where nothing can answer the prompt. Install it up front
+> if your pipeline touches toolboxes:
+>
+> ```bash
+> azd extension install azure.ai.toolboxes
+> ```
 
 > [!NOTE]
 > Some sample READMEs tell you to run `azd ext install microsoft.foundry`. That is an alias

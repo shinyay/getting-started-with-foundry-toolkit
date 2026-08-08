@@ -4,6 +4,24 @@
 
 This step needs a **deployed** agent (any of 01–03).
 
+> [!IMPORTANT]
+> **This folder is a specimen, not a standalone sample.** Unlike 01–03 it has no `azure.yaml`
+> and no source — because `azd ai agent eval` does not create a project, it *adds* eval
+> artifacts to an agent project you already deployed.
+>
+> The files here are a **real, unedited copy** of what `azd ai agent eval generate` wrote
+> during the verified run, laid out in the exact tree it produces, so you can read the format
+> before you generate your own. To actually run an eval, generate the artifacts inside your own
+> deployed agent's `src/<project>/` and run from there — see [Generate an eval suite](#generate-an-eval-suite).
+>
+> Two further honesty notes:
+> - `datasets/smoke-core/smoke-core_dg.jsonl` here is a **2-row excerpt**. The verified run
+>   below used the full **15-row** generated dataset, so these two rows alone will not
+>   reproduce `15 cases → 13 passed`.
+> - `.agent_configs/baseline/metadata.yaml`, referenced by `eval.yaml`, is **generated** into
+>   your project by `eval generate`. It is deliberately not vendored here rather than
+>   fabricated.
+
 ---
 
 ## Generate an eval suite
@@ -76,7 +94,7 @@ agent's own `description` and instructions, so they stay relevant as the agent c
 
 ## The rubric is weighted dimensions
 
-Real generated output (see [`evaluators/rubric_dimensions.json`](evaluators/rubric_dimensions.json)):
+Real generated output (see [`evaluators/smoke-core/rubric_dimensions.json`](evaluators/smoke-core/rubric_dimensions.json)):
 
 | Dimension | Weight | Checks |
 |---|---:|---|

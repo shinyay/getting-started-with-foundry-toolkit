@@ -317,14 +317,24 @@ comparison, Prompt Builder and evaluations.
 
 ## 15. Wrong port — 8087 vs 8088
 
-Both tracks have something called "Agent Inspector" and they listen on **different ports**.
+This is the single most confusing thing in the local loop, because **one command opens both
+ports**. `azd ai agent run` starts *two* listeners:
 
-| | VS Code extension track | `azd` track |
-|---|---|---|
-| Runtime | `agentdev` CLI | `azd` + `azure.ai.inspector` |
-| **Port** | **8087** | **8088** |
-| Debugger | `debugpy` on 5679 | — |
-| Launch | `F5` / task `"type": "aitk"` | `azd ai agent run` |
+| Port | What listens there | Flag | You do this with it |
+|---|---|---|---|
+| **8088** | The **agent server** — your actual HTTP endpoint | `--port` | `curl`, `azd ai agent invoke` |
+| **8087** | The **Agent Inspector UI** — a browser chat/trace surface | `--inspector-port` | open in a browser |
+
+So `8087` vs `8088` is **not** "VS Code vs azd". Both are azd. The mistake is invoking the
+Inspector UI port with `curl` (it serves the UI, not your agent) or opening the agent port in
+a browser (it has no UI, so you get a 404 — see [§4](#4-curl-httplocalhost8088-returns-404)).
+
+The **VS Code AI Toolkit** track is a separate implementation with its own ports —
+`debugpy` on **5679** for the `"type": "aitk"` launch task. Do not mix the two in one project.
+
+```bash
+azd ai agent run --port 9000 --inspector-port 9001   # both are movable
+```
 
 If the Inspector shows nothing, you are almost certainly pointed at the other port.
 

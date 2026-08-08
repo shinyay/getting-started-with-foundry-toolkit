@@ -20,6 +20,8 @@ Or copy this folder.
 ## The code
 
 ```python
+import os
+
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from agent_framework_foundry_hosting import ResponsesHostServer
@@ -30,6 +32,11 @@ load_dotenv()
 
 def main():
     model_name = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME") or os.getenv("FOUNDRY_MODEL_NAME")
+    if not model_name:                                   # ⓪ the guard behind gotcha #2
+        raise RuntimeError(
+            "Model deployment name is not configured. Set "
+            "AZURE_AI_MODEL_DEPLOYMENT_NAME or FOUNDRY_MODEL_NAME."
+        )
 
     client = FoundryChatClient(                          # ① talk to Foundry
         project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
@@ -154,3 +161,19 @@ azd down --force --purge
 ---
 
 👉 Next: [02 · Tools](../02-tools/) — give the agent something to *do*.
+
+---
+
+## Provenance
+
+This sample is **adapted from upstream**, not invented here. Exact mapping so you can diff it:
+
+| | |
+|---|---|
+| **Upstream path** | [`python/hosted-agents/agent-framework/responses/01-basic`](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/hosted-agents/agent-framework/responses/01-basic) |
+| **Upstream source dir** | `src/agent-framework-agent-basic-responses` |
+| **Source dir here** | `src/hello-world` |
+| **Deviations** | `azure.yaml` was reindented, keys reordered, `name` changed to `hello-world`, `description` reworded, and `codeConfiguration.dependencyResolution` + `infra.provider` **added**. |
+
+Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
+Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.

@@ -2,6 +2,11 @@
 
 > **New idea:** a hosted agent is just an HTTP server that speaks a protocol.
 
+> [!NOTE]
+> **Verified end-to-end on 2026-08-08** against live Azure (`eastus2`, `azd 1.30.0`):
+> `provision` 1m43s → 2 resources · `deploy` 3m1s → agent `active` · `invoke` responded in
+> 6.877s (first byte 3.622s) · `azd down --force --purge` 1m45s, verified back to zero.
+
 ```bash
 mkdir 01-hello && cd 01-hello
 azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/csharp/hosted-agents/agent-framework/hello-world/azure.yaml"
@@ -130,3 +135,19 @@ azd down --force --purge
 ---
 
 👉 Next: [02 · Tools](../02-tools/)
+
+---
+
+## Provenance
+
+This sample is **adapted from upstream**, not invented here. Exact mapping so you can diff it:
+
+| | |
+|---|---|
+| **Upstream path** | [`csharp/hosted-agents/agent-framework/hello-world`](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/csharp/hosted-agents/agent-framework/hello-world) |
+| **Upstream source dir** | `src/hello-world-dotnet-agent-framework` |
+| **Source dir here** | `src/hello-world` |
+| **Deviations** | `azure.yaml` `name`, service key and `project` all renamed to match the shortened directory. **This rename is exactly what broke the manifest** until it was fixed — see the note below. |
+
+Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
+Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.

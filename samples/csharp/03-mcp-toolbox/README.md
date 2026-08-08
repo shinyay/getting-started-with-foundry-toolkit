@@ -152,3 +152,19 @@ already installed in VS Code. See
 ---
 
 👉 Next: [04 · Evaluation](../../python/04-eval/) — language-agnostic.
+
+---
+
+## Provenance
+
+This sample is **adapted from upstream**, not invented here. Exact mapping so you can diff it:
+
+| | |
+|---|---|
+| **Upstream path** | [`csharp/hosted-agents/agent-framework/mcp-tools`](https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/csharp/hosted-agents/agent-framework/mcp-tools) |
+| **Upstream source dir** | `src/mcp-tools` |
+| **Source dir here** | `src/mcp-tools` |
+| **Deviations** | `azure.yaml` reindented/reordered; directory name unchanged from upstream. |
+
+Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
+Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.

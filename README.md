@@ -22,7 +22,11 @@ every output block was captured from a **real run against real Azure** — not c
 
 ```bash
 # 0. Prerequisites — the version floor is not optional
+#    Don't have azd yet? See docs/setup/ for Linux/Windows/macOS install.
+#    macOS w/ Homebrew:
 brew update && brew upgrade azd     # need >= 1.27.1
+#    Linux / WSL:  curl -fsSL https://aka.ms/install-azd.sh | bash
+#    Windows:      winget install microsoft.azd
 azd extension upgrade --all
 az login && azd auth login
 
@@ -70,17 +74,43 @@ This repo documents **A and B equally**, from verified runs, and maps the ecosys
 
 ## 🧭 I want to…
 
+**Learn**
+
 | Goal | Go here |
 |---|---|
 | …understand the mental model first | [📘 Concepts](docs/concepts/README.md) |
 | …get my machine ready | [🛠️ Setup](docs/setup/README.md) |
+| …not know what a word means | [📚 Glossary](docs/reference/glossary.md) ⭐ |
+
+**Build**
+
+| Goal | Go here |
+|---|---|
 | …build an agent from the terminal | [⌨️ CLI guide](docs/guide-cli/README.md) ⭐ |
 | …build an agent in VS Code | [🖱️ GUI guide](docs/guide-gui/README.md) |
+| …build an agent with no code | [💬 Prompt agents](docs/guide-prompt-agents/README.md) |
 | …learn by running code | [🧪 Samples ladder](samples/README.md) |
+| …have agents call each other | [🕸️ Multi-agent & A2A](docs/concepts/multi-agent.md) |
+
+**Look up**
+
+| Goal | Go here |
+|---|---|
 | …look up a manifest field | [🧾 `azure.yaml` reference](docs/reference/azure-yaml.md) |
 | …look up a CLI flag | [⚙️ CLI reference](docs/reference/azd-cli.md) |
 | …fix an error | [🔧 Troubleshooting](docs/reference/troubleshooting.md) ⭐ |
 | …know which docs to believe | [🗺️ Ecosystem map](docs/reference/ecosystem.md) |
+
+**Ship it for real**
+
+| Goal | Go here |
+|---|---|
+| …deploy from GitHub Actions | [🔄 CI/CD guide](docs/guide-cicd/README.md) |
+| …fix a 403 that only happens in the cloud | [🔐 Identity & RBAC](docs/reference/identity-and-rbac.md) ⭐ |
+| …know what it costs | [💰 Cost](docs/reference/cost.md) |
+| …read logs and traces | [📊 Observability](docs/reference/observability.md) |
+| …choose code vs container deploy | [🚢 Deploy modes](docs/reference/deploy-modes.md) |
+| …customise the infrastructure | [🏗️ Infrastructure](docs/reference/infrastructure.md) |
 
 ---
 
@@ -88,11 +118,14 @@ This repo documents **A and B equally**, from verified runs, and maps the ecosys
 
 ```text
 docs/
-├── concepts/     the 6 ideas everything else assumes
-├── setup/        install → auth → `doctor` all green
-├── guide-cli/    the golden path, every output verified ⭐
-├── guide-gui/    the same journey in VS Code
-└── reference/    azure.yaml · CLI · env vars · catalog · troubleshooting · ecosystem
+├── concepts/           the 6 ideas everything else assumes · multi-agent & A2A
+├── setup/              install → auth → `doctor` all green
+├── guide-cli/          the golden path, every output verified ⭐
+├── guide-gui/          the same journey in VS Code
+├── guide-prompt-agents/ agents with no code at all
+├── guide-cicd/         deploying from GitHub Actions with OIDC
+└── reference/          12 pages · manifest schema · 40 CLI commands · identity
+                        cost · observability · deploy modes · infra · glossary
 samples/
 ├── python/       01-hello-world → 02-tools → 03-mcp-toolbox → 04-eval
 └── csharp/       the same ladder in .NET 10

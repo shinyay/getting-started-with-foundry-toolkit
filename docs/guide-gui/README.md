@@ -68,8 +68,9 @@ Providers: Azure AI Foundry, Foundry Local, Ollama, ONNX, custom endpoints, plus
 (Azure OpenAI, OpenAI, Anthropic, Google).
 
 > [!WARNING]
-> **GitHub Models is retired.** Five official pages (`overview`, `models`, `tracing`,
-> `copilot-tools`, `faq`) still present it as the free on-ramp. It was removed from the Model
+> **GitHub Models is retired.** Four official pages (`overview`, `models`, `tracing`,
+> `copilot-tools`) still present it as the free on-ramp, and `faq` still refers to the
+> "GitHub model market". It was removed from the Model
 > Catalog, playground, comparison, Prompt Builder and evaluations in v1.6.7.
 > **Today's no-Azure path is Foundry Local / Ollama / ONNX.**
 
@@ -148,13 +149,22 @@ The Inspector also renders a **workflow graph** for Agent Framework workflows.
 
 ## 7. The two Agent Inspectors — 8087 vs 8088
 
-Same name, two implementations. Mixing them up is the most common GUI confusion.
+Same name, two implementations — *and* two ports inside the azd track alone. Mixing them up
+is the most common GUI confusion, so be precise about which of the three things you mean.
+
+`azd ai agent run` opens **both** of these at once:
+
+| Port | What it is | Flag |
+|---|---|---|
+| **8088** | Your agent's HTTP endpoint — what `invoke`/`curl` talk to | `--port` |
+| **8087** | The Agent Inspector **UI** — what the browser opens | `--inspector-port` |
+
+The VS Code AI Toolkit is a wholly separate stack:
 
 | | VS Code extension track | `azd` track |
 |---|---|---|
 | Runtime | `agentdev` CLI | `azd` + `azure.ai.inspector` extension |
-| **Agent port** | **8087** | **8088** |
-| Debugger | `debugpy` on `5679` | — |
+| **Ports** | `debugpy` on `5679` | **8088** agent · **8087** Inspector UI |
 | Launch | `F5`, task `"type": "aitk"` | `azd ai agent run` |
 | Command id | `ai-mlstudio.openTestTool` | — |
 
