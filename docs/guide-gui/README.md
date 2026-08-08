@@ -6,8 +6,25 @@
 
 > [!IMPORTANT]
 > **The two tracks are not the same tool.** The VS Code extension and `azd ai agent` are
-> parallel implementations that even use **different ports** (8087 vs 8088). Pick one per
-> project. See [§7](#7-the-two-agent-inspectors--8087-vs-8088).
+> parallel implementations with separate runtimes, separate local debug setups, and separate
+> conventions. Pick one per project rather than mixing them.
+>
+> A common myth to unlearn first: "8087 is VS Code, 8088 is azd". **It is not.** *Both* ports
+> belong to the azd track — `azd ai agent run` opens the agent on **8088** and the Inspector UI
+> on **8087**. The VS Code track's distinguishing port is `debugpy` on **5679**.
+> See [§7](#7-the-two-agent-inspectors--8087-vs-8088).
+
+> [!NOTE]
+> **This guide has no screenshots, deliberately.** Every other page in this repo shows real,
+> captured output; this environment has no VS Code GUI, so any screenshot here would have to be
+> borrowed or mocked up — and a stale screenshot of a fast-moving preview UI is worse than none,
+> because it looks authoritative while being wrong. The extension's own UI is the source of
+> truth: where this page and your screen disagree, **believe your screen** and please
+> [open an issue](../../README.md).
+>
+> What this page gives you instead: exact **command IDs**, **setting keys**, **file paths**, and
+> **menu labels** — the things you can search for in the Command Palette, which survive a UI
+> redesign in a way a screenshot does not.
 
 ---
 
@@ -284,7 +301,7 @@ Known bad links, verified:
 |---|---|---|
 | Scaffold | Create Agent wizard | `azd ai agent init` |
 | Provision | Foundry Project Setup | `azd provision` |
-| Run | `F5` → Inspector (**:8087**) | `azd ai agent run` (**:8088**) |
+| Run | `F5` → Inspector (debugpy **:5679**) | `azd ai agent run` (agent **:8088** + Inspector UI **:8087**) |
 | Test | Inspector chat | `azd ai agent invoke --local` |
 | Deploy | Deploy Hosted Agent wizard | `azd deploy` |
 | Invoke | Agent Playground | `azd ai agent invoke` |
@@ -292,9 +309,17 @@ Known bad links, verified:
 | Evaluate | Evaluation view | `azd ai agent eval` |
 | Diagnose | — | `azd ai agent doctor` ⭐ *(no GUI equivalent)* |
 | Optimize | — | `azd ai agent optimize` ⭐ *(no GUI equivalent)* |
+| Session lifecycle | — | `azd ai agent sessions …` *(no GUI equivalent)* |
+| Files in a session | — | `azd ai agent files …` *(no GUI equivalent)* |
+| Pull deployed source | — | `azd ai agent code download` *(no GUI equivalent)* |
+| Toolboxes | — | `azd ai toolbox …` *(no GUI equivalent)* |
 
-The CLI is strictly the larger surface. The GUI is better for exploration, prompt iteration and
-tracing visualisation.
+The CLI is strictly the larger surface — and by a wider margin than it first appears:
+**40 invocable commands** across `azd ai agent` alone, plus three more `azd ai` namespaces.
+Four whole families above have no GUI counterpart at all.
+
+The GUI is better for exploration, prompt iteration and tracing visualisation. The CLI is the
+only complete option for automation, day-2 operations and anything reproducible.
 
 ---
 

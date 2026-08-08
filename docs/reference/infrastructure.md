@@ -84,19 +84,36 @@ as code.
 | Container registry hardening | ❌ | ✅ | Captured Bicep includes ACR, AcrPull and project connection resources. |
 | Terraform-only platform workflow | ❌ | ✅ | Use `--infra=terraform`. |
 
+> [!NOTE]
+> Inferred from the Bicep template, not observed in a live run: the table rows about private
+> networking and registry hardening describe capabilities exposed by ejected files. The live run
+> used code mode with `AZURE_FOUNDRY_NETWORK_MODE="none"` and no ACR.
+
 ---
 
 ## Verified ejection behaviour
 
-<details open>
+<details>
 <summary>✅ Verified Bicep init/eject log excerpt</summary>
 
 ```text
 Initializing an app to run on Azure (azd init)
 
-Copying template code from local path to: .../infra/bicep/agent-framework-agent-basic-responses
+Copying template code from local path to: <work-dir>/bicep/agent-framework-agent-basic-responses
   (✓) Done: Initialized git repository
-  (✓) Done: Copying template code from local path to: .../infra/bicep/agent-framework-agent-basic-responses
+  (✓) Done: Copying template code from local path to: <work-dir>/bicep/agent-framework-agent-basic-responses
+
+
+Installing required extensions...
+Installing azure.ai.agents extension
+  (-) Skipped: Installing azure.ai.agents extension (version 1.0.0-beta.9 already installed)
+Missing Azure environment values: AZURE_SUBSCRIPTION_ID, AZURE_LOCATION. Continuing because --no-prompt was specified.
+Set the missing values before running azd provision or azd deploy:
+  azd env set AZURE_SUBSCRIPTION_ID <subscription-id>
+  azd env set AZURE_LOCATION <region>
+  # Optional: azd env set AZURE_AI_DEPLOYMENTS_LOCATION <region>
+
+Adopted the sample's azure.yaml as the project manifest at azure.yaml.
 
 Generating infrastructure files from azure.yaml...
 
@@ -124,9 +141,21 @@ Next steps:
 ```text
 Initializing an app to run on Azure (azd init)
 
-Copying template code from local path to: .../infra/tf/agent-framework-agent-basic-responses
+Copying template code from local path to: <work-dir>/tf/agent-framework-agent-basic-responses
   (✓) Done: Initialized git repository
-  (✓) Done: Copying template code from local path to: .../infra/tf/agent-framework-agent-basic-responses
+  (✓) Done: Copying template code from local path to: <work-dir>/tf/agent-framework-agent-basic-responses
+
+
+Installing required extensions...
+Installing azure.ai.agents extension
+  (-) Skipped: Installing azure.ai.agents extension (version 1.0.0-beta.9 already installed)
+Missing Azure environment values: AZURE_SUBSCRIPTION_ID, AZURE_LOCATION. Continuing because --no-prompt was specified.
+Set the missing values before running azd provision or azd deploy:
+  azd env set AZURE_SUBSCRIPTION_ID <subscription-id>
+  azd env set AZURE_LOCATION <region>
+  # Optional: azd env set AZURE_AI_DEPLOYMENTS_LOCATION <region>
+
+Adopted the sample's azure.yaml as the project manifest at azure.yaml.
 
 Generating infrastructure files from azure.yaml...
 
@@ -140,6 +169,9 @@ Generating infrastructure files from azure.yaml...
   Updated azure.yaml (infra.provider: terraform)
 
 Future provisions will read from ./infra/.
+
+Next steps:
+  azd provision    Apply changes
 ```
 </details>
 
@@ -268,14 +300,19 @@ The managed provider hides useful knobs. The captured Bicep makes them visible.
 
 | Capability | Evidence | What it enables |
 |---|---|---|
-| Private data plane | `publicNetworkAccess: 'Disabled'` when isolation is on | Keeps the Foundry account off the public data plane. |
-| BYO VNet injection | `networkInjections` and `agentSubnetArmId` | Places the agent runtime into a customer subnet. |
+| Private data plane | `publicNetworkAccess: 'Disabled'` when `enableNetworkIsolation` is true | Keeps the Foundry account off the public data plane. |
+| BYO VNet injection | `networkInjections`, `agentSubnetArmId`, `useMicrosoftManagedNetwork: false` | Places the agent runtime into a customer subnet. |
 | Microsoft-managed egress | `useManagedEgress` and `managednetworks@2025-10-01-preview` | Uses the platform-managed network with optional isolation mode. |
 | Private endpoint | `private-endpoint-dns.bicep` | Creates an account private endpoint in the PE subnet. |
-| Private DNS | three `privatelink.*` zones | Resolves Foundry/OpenAI/Cognitive Services endpoints privately. |
-| ACR | `Microsoft.ContainerRegistry/registries@2023-07-01` | Creates a Premium registry for Docker-backed agents. |
-| AcrPull | role id `7f951dda-4ed3-4680-a7ca-43fe172d538d` | Lets the Foundry project managed identity pull images. |
-| Project connections | `connections.bicep` | Provisions MCP, Cognitive Search, API key, custom key or other project connections. |
+| Private DNS | three zones: `privatelink.services.ai.azure.com`, `privatelink.openai.azure.com`, `privatelink.cognitiveservices.azure.com` | Resolves Foundry/OpenAI/Cognitive Services endpoints privately. |
+| ACR | `Microsoft.ContainerRegistry/registries@2023-07-01` | Creates a Premium registry when `includeAcr` is true. |
+| AcrPull | role id `7f951dda-4ed3-4680-a7ca-43fe172d538d` | Lets the Foundry project managed identity pull images from that registry. |
+| Project connections | `connections.bicep` | Provisions project connection resources declared from `host: azure.ai.connection` services. |
+
+> [!NOTE]
+> Inferred from the Bicep template, not observed in a live run. The captured live code-mode run
+> had `AZURE_FOUNDRY_NETWORK_MODE="none"`, `ENABLE_CAPABILITY_HOST="false"`,
+> `AZURE_CONTAINER_REGISTRY_ENDPOINT=""`, and only two Azure resources.
 
 ---
 
@@ -332,10 +369,12 @@ terraform -chdir=infra validate
 ## One-way ownership model
 
 There is no verified command in the captured help text for "re-importing" edited Bicep or
-Terraform back into `infra.provider: microsoft.foundry`. Practically, treat ejection as one-way:
+Terraform back into `infra.provider: microsoft.foundry`.
 
-you can delete and re-scaffold in a new branch, but azd will not merge your custom IaC back into
-the managed provider for you.
+> [!NOTE]
+> Inferred from the available help text, not observed in a live run: treat ejection as one-way.
+> You can delete and re-scaffold in a new branch, but no captured command merges custom IaC back
+> into the managed provider for you.
 
 ---
 

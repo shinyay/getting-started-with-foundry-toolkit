@@ -34,16 +34,32 @@ No sample title or path in the captured catalog contained `A2A` or `agent-to-age
 
 | Sample | Files inspected via `raw.githubusercontent.com` |
 |---|---|
-| Python Workflow agent | `README.md`, `azure.yaml`, `src/agent-framework-workflows-responses/main.py`, `requirements.txt` |
+| Python Workflow agent | `README.md`, `azure.yaml`, `src/agent-framework-workflows-responses/main.py`, `src/agent-framework-workflows-responses/requirements.txt` |
 | C# Translation Workflow agent | `README.md`, `azure.yaml`, `src/workflows/Program.cs`, `src/workflows/workflows.csproj` |
+| C# A2A delegation sample | `README.md`, `caller/azure.yaml`, `caller/src/.../Program.cs`, `executor/azure.yaml`, `executor/src/.../Program.cs`, `executor/src/.../scripts/setup-a2a.sh` |
 
 The source inspection below is based on those files, not on a live deployment.
 </details>
 
+<details>
+<summary><b>✅ Verified command-help surface for A2A/card configuration</b></summary>
+
+Captured help shows `azd ai agent endpoint` has exactly two subcommands:
+
+| Command | Verified purpose |
+|---|---|
+| `azd ai agent endpoint show [name]` | Displays protocols, version selector, authorization schemes and agent card configured on the live agent. |
+| `azd ai agent endpoint update [name] [--force]` | Reads `agentEndpoint` / `agentCard` from `azure.yaml` (or legacy `agent_endpoint` / `agent_card`) and patches the existing agent without creating a new version. |
+
+`endpoint update` has one command-specific flag: `--force`, described as "Skip confirmation
+prompts for breaking changes."
+</details>
+
 > [!IMPORTANT]
 > Blocks in this page are labelled carefully. Catalog discovery and upstream source inspection
-> are verified. Architecture diagrams are **illustrative** unless explicitly tied to the two
-> inspected samples.
+> are verified. A2A behavior is described from command help and upstream source only; I did
+> **not** make a live agent-to-agent call or fetch a live agent card. Architecture diagrams are
+> **illustrative** unless explicitly tied to inspected sample code.
 
 ---
 
@@ -267,23 +283,61 @@ sequenceDiagram
 | A2A concept | Meaning in Foundry |
 |---|---|
 | **A2A base path** | `.../agents/<agent>/endpoint/protocols/a2a` |
-| **Agent card URL** | Versioned discovery URL under the A2A endpoint, for example `agentCard/v1.0` |
-| **Calling identity** | The identity that must be allowed to call the target agent. |
-| **Target role** | For incoming Foundry A2A, the caller needs a role such as Foundry Agent Consumer or higher on the target project. |
-| **Protocol dependency** | Hosted agents must implement `responses` before incoming A2A can be enabled. |
+| **Agent card URL** | Discovery URL under the A2A endpoint. The inspected C# sample uses `agentCard/v0.3`; do not assume that path for all future A2A versions. |
+| **Calling identity** | The identity/token forwarded to the target. The inspected caller uses a `RemoteA2A` connection with `authType: UserEntraToken`, so the toolbox forwards the **calling user's** Microsoft Entra token. |
+| **Target role** | The inspected sample README requires **Foundry User** (or higher) on the project. I did not verify a narrower live role. |
+| **Protocol dependency** | The inspected Foundry-hosted A2A sample starts with `responses` agents and PATCHes the executor endpoint to expose both `responses` and `a2a`. |
 
 > [!IMPORTANT]
 > A2A is a trust boundary, not just a function call. Treat the remote agent like an external
 > service: authenticate it, authorise the caller, version it, monitor it and decide what user
 > context may cross the boundary.
 
+### ✅ Source-verified C# sample: caller → RemoteA2A toolbox → executor
+
+The upstream tree contains a C# A2A delegation sample at
+`samples/csharp/hosted-agents/agent-framework/a2a/01-delegation`. It was **not** present in
+the captured `azd ai agent sample list` output, so treat it as upstream source evidence rather
+than catalog evidence.
+
+| Piece | What the source says |
+|---|---|
+| Executor | A hosted Responses agent named `agent-framework-a2a-executor-responses-dotnet` that answers arithmetic/math questions. |
+| Incoming A2A enablement | `executor/scripts/setup-a2a.sh` PATCHes `"$FOUNDRY_PROJECT_ENDPOINT/agents/$AGENT_NAME?api-version=v1"` with `agent_card` and `agent_endpoint.protocols: ["responses", "a2a"]`. |
+| Executor A2A endpoint | The script prints `$FOUNDRY_PROJECT_ENDPOINT/agents/$AGENT_NAME/endpoint/protocols/a2a`. |
+| Agent-card path in the sample | The script prints `.../protocols/a2a/agentCard/v0.3`; the caller manifest also sets `AgentCardPath: /agentCard/v0.3` and `agent_card_path: agentCard/v0.3`. |
+| Caller | A hosted Responses agent named `agent-framework-a2a-caller-responses-dotnet` that loads a Foundry Toolbox. |
+| Connection/tool wiring | The caller manifest declares a `RemoteA2A` connection and an `a2a_preview` toolbox tool. `azd provision` creates them for the caller project. |
+| Auth | The parent README says the `RemoteA2A` connection uses `authType: UserEntraToken`, forwarding the calling user's Microsoft Entra token. |
+
+> [!NOTE]
+> Described from upstream source only. I did not deploy the caller/executor pair, run the
+> `setup-a2a` script, invoke the caller, or fetch the advertised card from a live endpoint.
+
+### ✅ Verified CLI surface: endpoint show/update
+
+The current CLI help exposes `azd ai agent endpoint show` and `azd ai agent endpoint update`.
+That matters because the endpoint/card configuration is mutable without creating a new agent
+version.
+
+| Command | Verified from help |
+|---|---|
+| `endpoint show` | Shows protocols, version selector / traffic split, authorization schemes and agent card configured on the live agent. |
+| `endpoint update` | Reads `agentEndpoint` / `agentCard` from `azure.yaml` (or legacy snake_case fields) and patches the existing agent. |
+| `endpoint update --force` | Skips confirmation prompts for breaking changes. |
+
+> [!CAUTION]
+> I did not run `endpoint update`, so this page does **not** quote its success output. The only
+> verified output here is `--help` text and upstream sample source. Do not copy invented
+> command output into this guide.
+
 ### What I could not verify
 
 | Claim | Status |
 |---|---|
 | A live Foundry-hosted A2A call from one deployed agent to another | **Not verified** — would require deployed agents / Azure resources. |
-| A live agent card response from this repo's samples | **Not verified** — incoming A2A is not enabled by the sample manifests inspected. |
-| `azd ai agent endpoint update` exact output for A2A/card patching | **Not verified** — no write commands were run. |
+| A live agent card response | **Not verified** — I inspected source and scripts only; no deployed endpoint was called. |
+| `azd ai agent endpoint update` exact success output for A2A/card patching | **Not verified** — no write commands were run. |
 
 ---
 
@@ -309,6 +363,22 @@ flowchart LR
 Every deployed hosted agent gets its own managed identity. In `azd ai agent show --output json`,
 that identity appears as `instance_identity.principal_id` and `instance_identity.client_id`.
 
+In the live C# deployment captured for this repo, `azd ai agent show` printed:
+
+```text
+Agent GUID                       4e7e0e00-af5c-462b-a40b-09657fc5e964
+Instance Identity Principal ID   af65ac56-3c8b-4fc9-ba35-9cb1a37e52da
+Instance Identity Client ID      af65ac56-3c8b-4fc9-ba35-9cb1a37e52da
+Blueprint Principal ID           68c06f0f-7eee-48d0-8d6b-ddeb81f5c1bb
+Blueprint Client ID              6371fa08-38ff-483f-aadf-98edb2ecb0af
+Blueprint Reference Type         ManagedAgentIdentityBlueprint
+Blueprint Reference ID           hello-world-4e7e0
+```
+
+That capture proves two multi-agent-relevant details: the running agent identity is separate
+from the blueprint identity, and the blueprint principal/client IDs are not interchangeable
+with the instance principal you grant roles to.
+
 | Design | What it means |
 |---|---|
 | One workflow agent with internal nodes | All nodes run as the same hosted-agent identity. Simple, but no per-node RBAC. |
@@ -320,6 +390,11 @@ that identity appears as `instance_identity.principal_id` and `instance_identity
 > Do not use multi-agent boundaries to bypass access control. If Agent A is not allowed to read
 > a resource, routing the request through Agent B must be an intentional, audited delegation with
 > explicit roles.
+
+> [!WARNING]
+> The verified default provision created **zero role assignments at resource-group scope**.
+> Do not assume agent-to-agent authorization is set up for you. Grant the exact caller
+> identity/token path required by your chosen pattern and verify it independently.
 
 ---
 
@@ -449,7 +524,8 @@ A good eval suite for the verified C# translation workflow would include:
 | Both workflow samples expose the `responses` protocol. | Verified in upstream `azure.yaml` files. |
 | The Python workflow is writer → legal reviewer → formatter. | Verified in upstream `main.py`. |
 | The C# workflow is English → French → Spanish → English. | Verified in upstream `Program.cs`. |
-| A2A exists in Foundry docs and CLI surface, but no A2A sample was present in the captured catalog. | Verified catalog filter; A2A docs inspected, no live A2A call run. |
+| A2A exists in Foundry docs and CLI surface, and the upstream tree contains a C# caller/executor A2A delegation sample. | Verified by command help and upstream source inspection; no live A2A call run. |
+| The captured sample catalog did **not** advertise an A2A sample. | Verified catalog filter; source tree and catalog are not identical. |
 | Per-agent managed identity matters for multi-agent trust. | Verified in this repo's deployed `show` example and documented hosted-agent behavior. |
 
 ---

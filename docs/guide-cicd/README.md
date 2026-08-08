@@ -117,6 +117,13 @@ steps:
 | Invoke only | **Foundry Agent Consumer** | Least privilege for smoke-test callers that should not edit agents. |
 | Purge soft-deleted Foundry accounts | Azure **Contributor** at subscription scope according to current RBAC notes | Needed when teardown uses `--purge` or manual purge cleanup. |
 
+> [!WARNING]
+> The live run for this repo found **zero role assignments at resource-group scope** after
+> `azd provision`; the sample worked because the deploying user inherited broad subscription
+> permissions (`Owner` plus Foundry data-plane roles). A least-privilege GitHub OIDC service
+> principal will not automatically inherit that. Treat the role table above as the starting
+> point to validate in your tenant, not proof that the workflow is least-privilege complete.
+
 > [!TIP]
 > Use separate GitHub environments (`dev`, `staging`, `prod`) with different federated
 > credentials and reviewers. A PR environment can have create/delete rights; production should
@@ -147,6 +154,7 @@ The workflow below pins:
 |---|---|---|
 | `azd` | `AZD_VERSION: "1.30.0"` | Core CLI gates compatible extension versions. |
 | `azure.ai.agents` | `AZD_AI_AGENTS_EXTENSION_VERSION: "1.0.0-beta.9"` | Extension gates manifest parsing and command behavior. |
+| `azure.ai.projects` | `AZD_AI_PROJECTS_EXTENSION_VERSION: "1.0.0-beta.5"` | Current samples contain `host: azure.ai.project`; install it explicitly so CI never hits an extension-install prompt. |
 
 <details>
 <summary>✅ Verified locally: installed versions used while writing this page</summary>
@@ -173,6 +181,12 @@ requiredVersions:
 > `azd extension upgrade` can **silently downgrade** the extension when the installed `azd`
 > is too old, printing only a warning such as “installing 0.1.x instead”. Do not rely on
 > “upgrade latest” in CI. Pin, print, and fail early.
+
+> [!IMPORTANT]
+> `azd ai` is split across four extensions: `azure.ai.agents`, `azure.ai.projects`,
+> `azure.ai.inspector`, and `azure.ai.toolboxes`. If a workflow calls a namespace whose
+> extension is missing, `azd` offers to install it interactively. That is convenient locally
+> and a hard failure in CI. Install every namespace your workflow or `azure.yaml` uses.
 
 ---
 
@@ -249,6 +263,7 @@ concurrency:
 env:
   AZD_VERSION: "1.30.0"
   AZD_AI_AGENTS_EXTENSION_VERSION: "1.0.0-beta.9"
+  AZD_AI_PROJECTS_EXTENSION_VERSION: "1.0.0-beta.5"
   AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
@@ -283,11 +298,12 @@ jobs:
           azd version
           azd version | grep "azd version ${AZD_VERSION} "
 
-      - name: Install pinned Foundry agent extension
+      - name: Install pinned Foundry extensions
         shell: bash
         run: |
           set -euo pipefail
           azd extension install azure.ai.agents --version "$AZD_AI_AGENTS_EXTENSION_VERSION" --no-prompt
+          azd extension install azure.ai.projects --version "$AZD_AI_PROJECTS_EXTENSION_VERSION" --no-prompt
           azd extension list --installed --output json
 
       - name: Azure login with OIDC
@@ -385,11 +401,12 @@ jobs:
           tar -xzf azd.tar.gz -C "$HOME/.azd/bin"
           echo "$HOME/.azd/bin" >> "$GITHUB_PATH"
 
-      - name: Install pinned Foundry agent extension
+      - name: Install pinned Foundry extensions
         shell: bash
         run: |
           set -euo pipefail
           azd extension install azure.ai.agents --version "$AZD_AI_AGENTS_EXTENSION_VERSION" --no-prompt
+          azd extension install azure.ai.projects --version "$AZD_AI_PROJECTS_EXTENSION_VERSION" --no-prompt
 
       - name: Azure login with OIDC
         uses: azure/login@v2
@@ -420,7 +437,7 @@ jobs:
 | Line of defense | Why it is there |
 |---|---|
 | `permissions.id-token: write` | Required for GitHub OIDC token minting. |
-| Pinned `azd` and `azure.ai.agents` | Prevents manifest-format drift and silent extension downgrades. |
+| Pinned `azd`, `azure.ai.agents`, and `azure.ai.projects` | Prevents manifest-format drift, missing-extension prompts, and silent extension downgrades. |
 | `azd auth login --federated-credential-provider github` | Gives `azd` its own login; `azure/login` alone authenticates Azure CLI. |
 | `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME` | Carries through the provisioning gap documented in this repo. |
 | `doctor --local-only` before provision | Fails fast on parse/config problems before touching Azure. |
@@ -520,6 +537,19 @@ If purge still conflicts, inspect deleted accounts manually:
 az cognitiveservices account list-deleted -o table
 az cognitiveservices account purge -n <name> -g <resource-group> -l <location>
 ```
+
+### Timeout sizing from the captured run
+
+The C# hello-world live run used for this repository took:
+
+| Operation | Captured duration |
+|---|---:|
+| `azd provision` | 1m43s |
+| `azd deploy` | 3m1s |
+| `azd down --force --purge` | 1m45s |
+
+Keep the workflow's 60-minute deploy timeout for quota, cold remote builds, extension install
+latency and eval runs; do not tune it down to the happy-path timings.
 
 ---
 

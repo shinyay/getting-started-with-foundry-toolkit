@@ -2,6 +2,11 @@
 
 > **New idea:** a hosted agent is just an HTTP server that speaks a protocol.
 
+> [!NOTE]
+> **Verified end-to-end on 2026-08-08** against live Azure (`eastus2`, `azd 1.30.0`):
+> `provision` 1m20s → 2 resources · `deploy` 2m21s → agent `active` · `invoke` responded in
+> 14.242s (first byte 7.357s) · `azd down --force --purge` 1m46s, verified back to zero.
+
 Everything else in this ladder is a variation on this file.
 
 ---

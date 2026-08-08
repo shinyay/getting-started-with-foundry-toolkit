@@ -40,9 +40,9 @@ short version. The deeper distinction is about **where behavior lives**.
 | Best first step | Build in Agent Builder, then copy SDK snippet | Start with [CLI guide](../guide-cli/README.md) |
 
 > [!NOTE]
-> Microsoft Learn defines a prompt agent as a declaratively defined agent that combines a
-> Foundry model, instructions, tools and natural-language prompts to drive behavior. Hosted
-> agents are for custom code and managed container execution.
+> The captured VS Code Foundry Toolkit docs describe prompt agents as lightweight agents
+> defined by instructions, model settings and optional tools. Hosted agents are the custom-code
+> path.
 
 ---
 
@@ -51,7 +51,7 @@ short version. The deeper distinction is about **where behavior lives**.
 ### CLI investigation
 
 <details open>
-<summary>✅ Verified locally: `azd ai agent --help` focuses on hosted-agent lifecycle commands</summary>
+<summary>✅ Verified locally: `azd ai agent --help` has no prompt-agent create/update command</summary>
 
 ```text
 Available Commands:
@@ -64,12 +64,19 @@ Available Commands:
   init        Initialize a new AI agent project. (Preview)
   invoke      Send a message to your agent.
   monitor     Monitor logs from a hosted agent.
+  optimize    Evaluate and optimize AI agents.
   run         Run your agent locally for development.
   sample      Browse the curated catalog of agent samples and azd templates.
   sessions    Manage sessions for a hosted agent endpoint.
   show        Show the status of a hosted agent.
+  version     Prints the version of the application
 ```
 </details>
+
+The captured command surface has **15 top-level subcommands and 40 invocable commands**. None
+is named `create`, `update`, `prompt`, or `definition`, and `init` is hosted/code/container
+oriented. In this `azure.ai.agents 1.0.0-beta.9` build, prompt-agent creation is **not** an
+`azd ai agent` workflow.
 
 <details>
 <summary>✅ Verified locally: `azd ai agent init --help` has no prompt-agent mode flag</summary>
@@ -103,8 +110,9 @@ all template types are azure.yaml
 
 | Source checked | What it says |
 |---|---|
-| Microsoft Learn quickstart, “Create a prompt agent” | Uses `PromptAgentDefinition` in Python, `DeclarativeAgentDefinition` in C#, TypeScript `kind: "prompt"`, and REST `definition.kind: "prompt"`. |
-| Microsoft Foundry Skill from `microsoft/azure-skills` | Says prompt agents are created/updated through Foundry MCP tools (`agent_definition_schema_get`, `agent_update`, `agent_get`, `agent_delete`) with SDK fallback. |
+| Captured VS Code Agent Builder docs | Prompt agents are created from **My Resources → project → Prompt Agents → +**, then configured with name, model, instructions and optional tools. |
+| Captured VS Code Agent Builder docs | Agent Builder supports variables, MCP servers, function-calling tools from JSON schema/example, mock responses, Evaluation tab, View Code and View Snippet. |
+| Microsoft Foundry Skill from `microsoft/azure-skills` | Says prompt agents are created/updated through Foundry MCP tools (`agent_definition_schema_get`, `agent_update`, `agent_get`, `agent_delete`) with SDK fallback. This is **skill guidance, not live output from this repo**. |
 | This repo's `docs/concepts/README.md` | Explains prompt agents as instructions + model config + catalog tools, usually built in Agent Builder or portal. |
 | This repo's `docs/reference/azure-yaml.md` | Shows `kind: hosted` in the verified manifest and notes `kind: hosted | prompt`, but does not give a verified prompt-agent `azure.yaml` schema. |
 
@@ -132,9 +140,14 @@ all template types are azure.yaml
 
 ---
 
-## 4. The verified prompt-agent definition core
+## 4. The documented prompt-agent definition core — not live-tested
 
-The most concrete shape I could verify from Microsoft Learn is the agent definition object:
+> [!NOTE]
+> Illustrative — this JSON shape is documented/skill-derived and was **not** executed against
+> a live Azure subscription in this repo. It is included to explain the concept, not as a
+> captured payload.
+
+The most concrete shape found during this audit is the agent definition object:
 
 ```json
 {
@@ -147,12 +160,12 @@ The most concrete shape I could verify from Microsoft Learn is the agent definit
 }
 ```
 
-| Field | Verified? | Meaning |
+| Field | Evidence status | Meaning |
 |---|---:|---|
-| `name` | ✅ | Agent name within the Foundry project. Updates create versions under this name. |
-| `definition.kind` | ✅ | `"prompt"` for prompt agents. |
-| `definition.model` | ✅ | Model deployment/name used by the prompt agent. Learn examples use `gpt-5-mini`. |
-| `definition.instructions` | ✅ | System/developer instructions that define behavior. |
+| `name` | ⚠️ documented / not executed | Agent name within the Foundry project. Updates are expected to create versions under this name. |
+| `definition.kind` | ⚠️ documented / not executed | `"prompt"` for prompt agents. |
+| `definition.model` | ⚠️ documented / not executed | Model deployment/name used by the prompt agent. |
+| `definition.instructions` | ⚠️ documented / not executed | System/developer instructions that define behavior. |
 | `temperature` | ⚠️ Skill-only in my investigation | The Foundry Skill mentions it as optional for MCP creation, but I did not verify the wire field from schema output. |
 | `tools` | ✅ as a concept, ⚠️ shape varies | Tool support is documented; exact JSON shape depends on tool type and SDK/API version. |
 | `knowledge` / file search | ✅ as file search/vector store concept, ⚠️ field shape not fully verified here | File search requires vector stores and `vector_store_ids`; do not add it without checking the current schema. |
@@ -202,18 +215,18 @@ Rules:
 Prompt agents are useful because Foundry owns the model call and tool orchestration. The exact
 schema should come from the current SDK, REST schema, or MCP `agent_definition_schema_get`.
 
-| Capability | Verified status | Notes |
+| Capability | Evidence status | Notes |
 |---|---|---|
-| Model | ✅ | Required in Learn examples. Must refer to a deployed/available Foundry model. |
-| Instructions | ✅ | Required for meaningful behavior; field is shown in Learn examples. |
-| Code Interpreter | ✅ concept | Listed by the Foundry Skill as a prompt-agent tool category. |
-| Function calling | ✅ concept | Agent Builder can define custom tools from JSON-schema examples and mock responses. |
-| File Search | ✅ concept + prerequisite | Requires vector stores; creating file search without `vector_store_ids` fails. |
-| Web Search | ✅ concept | Skill says use `WebSearchPreviewTool` by default; use Bing Grounding only when explicitly required. |
-| Bing Grounding | ✅ concept | Requires a Bing connection; do not use as the default web-search path. |
-| Azure AI Search | ✅ concept | Use for private data search; requires project connection/configuration. |
-| MCP tools | ✅ concept | Agent Builder can connect featured MCP servers, stdio commands, or HTTP/SSE servers. |
-| Memory | ✅ concept | Skill lists memory as a prompt-agent option; verify prerequisites before using. |
+| Model | ✅ captured UI concept, ⚠️ API field not executed | Agent Builder has a model dropdown and browse-model flow. |
+| Instructions | ✅ captured UI concept, ⚠️ API field not executed | Agent Builder has an Instructions field. |
+| Code Interpreter | ⚠️ skill-only in this audit | Listed by the Foundry Skill as a prompt-agent tool category. |
+| Function calling | ✅ captured UI concept | Agent Builder can define custom tools from JSON-schema examples or uploaded schema files and mock responses. |
+| File Search | ⚠️ skill-only prerequisite detail | Skill says file search requires vector stores and `vector_store_ids`; verify current schema before use. |
+| Web Search | ⚠️ skill-only in this audit | Skill says use `WebSearchPreviewTool` by default; use Bing Grounding only when explicitly required. |
+| Bing Grounding | ⚠️ skill-only in this audit | Skill says it requires a Bing connection; verify prerequisites before use. |
+| Azure AI Search | ⚠️ skill-only in this audit | Use for private data search; verify project connection/configuration before use. |
+| MCP tools | ✅ captured UI concept | Agent Builder can connect featured MCP servers, VS Code tools, stdio commands, or HTTP/SSE servers. |
+| Memory | ⚠️ skill-only in this audit | Skill lists memory as a prompt-agent option; verify prerequisites before using. |
 
 > [!WARNING]
 > Tool shapes are preview and tool-specific. For example, file search requires a vector store
@@ -227,7 +240,7 @@ schema should come from the current SDK, REST schema, or MCP `agent_definition_s
 ### Python SDK — illustrative, from Microsoft Learn shape
 
 This is **illustrative** because it was not executed in this repo and would create a Foundry
-agent version.
+agent version. It was also not package-installed or syntax-validated in this repository.
 
 ```python
 from azure.identity import DefaultAzureCredential
@@ -255,6 +268,8 @@ print(agent.name, agent.version)
 
 ### REST — illustrative, from Microsoft Learn shape
 
+This is **illustrative** and was not sent to a live project endpoint.
+
 ```bash
 curl -X POST "https://<resource>.services.ai.azure.com/api/projects/<project>/agents?api-version=v1" \
   -H "Content-Type: application/json" \
@@ -269,7 +284,7 @@ curl -X POST "https://<resource>.services.ai.azure.com/api/projects/<project>/ag
   }'
 ```
 
-### Foundry MCP — verified from the Skill, not executed
+### Foundry MCP — skill guidance, not executed
 
 The Microsoft Foundry Skill describes this flow:
 
@@ -279,15 +294,20 @@ The Microsoft Foundry Skill describes this flow:
 4. Use `agent_get` to verify, `agent_delete` to remove, and `agent_invoke` or the SDK to test.
 
 > [!CAUTION]
-> I did not have a project endpoint or Foundry MCP schema output in this documentation task, so
-> this page does not include a fabricated MCP payload.
+> Skill guidance is not the same as captured CLI output. I did not have a project endpoint or
+> Foundry MCP schema output in this documentation task, so this page does not include a
+> fabricated MCP payload.
 
 ---
 
 ## 8. Invoke a prompt agent
 
-Prompt agents are invoked through the Foundry project OpenAI/Responses surface with an agent
-reference, or through SDK helpers that bind a client to the agent.
+> [!NOTE]
+> Illustrative — the calls below are SDK/skill-derived patterns, not live captures. No prompt
+> agent was created or invoked during this repo's live Azure run.
+
+Prompt agents are invoked through a Foundry project OpenAI/Responses-style surface with an
+agent reference, or through SDK helpers that bind a client to the agent.
 
 Illustrative REST call:
 
@@ -337,16 +357,15 @@ My Resources → <project> → Prompt Agents → <agent>
 
 | Agent Builder feature | Why it matters for prompt agents |
 |---|---|
-| Model dropdown | Choose the model backing the prompt agent. |
+| Model dropdown | Choose or browse the model backing the prompt agent. |
 | Instructions editor | Main authoring surface for behavior. |
-| Variables | Test templated prompts with dynamic values. |
-| MCP server connection | Attach local stdio or remote HTTP/SSE MCP servers. |
-| Featured MCP servers | Discover common tool integrations. |
-| Custom function tool | Define function-calling tools from schema/examples. |
-| Mock responses | Make tool behavior deterministic while evaluating prompt changes. |
-| Evaluation tab | Reuse mocks and test cases to score prompt behavior. |
-| View Code / View Snippet | Generate app code that calls the prompt agent. |
-| Conversation history | Review test conversations across iterations. |
+| Variables | Captured docs show variables in instructions and a Variables section for test values. |
+| MCP server connection | Attach featured MCP servers, VS Code tools, stdio commands, or HTTP/SSE servers. |
+| Custom function tool | Define function-calling tools from JSON schema examples or uploaded JSON schema files. |
+| Mock responses | Captured docs show mock responses on function tool cards and in evaluation test cases. |
+| Evaluation tab | Run datasets, add built-in evaluators, and compare versions. |
+| View Code / View Snippet | Generate a Python project or single-file snippet that calls the prompt agent. |
+| Version history | Captured docs show save-as-new-version, version switching, rename/delete, and comparison. |
 
 > [!TIP]
 > Agent Builder is the safest place to discover tool prerequisites. If the UI needs a
@@ -452,8 +471,8 @@ schema:
 - Exact wire shapes for every prompt-agent tool category in the current preview.
 - Live output from creating, updating, invoking or deleting a prompt agent.
 
-That is why this page gives verified core fields and safe workflows, but does **not** fabricate
-an `agent.yaml` schema.
+That is why this page gives only the documented minimal fields and safe workflows, but does
+**not** fabricate an `agent.yaml` schema.
 
 ---
 

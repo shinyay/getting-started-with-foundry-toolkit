@@ -51,10 +51,39 @@ Twelve pages, grouped by what you are trying to do.
 | Protocols | `responses` ⭐, `invocations`, `invocations_ws`, `activity` |
 | CPU/memory tiers | `0.25/0.5Gi`, `0.5/1Gi`, `1/2Gi`, `2/4Gi` |
 | Resources created | 1 CognitiveServices account + 1 project |
-| Verified timings (Python) | provision 1m25s · deploy 2m3s · eval 3m15s · teardown 2m11s |
-| Verified timings (C#) | provision 1m43s · deploy 3m1s · teardown 1m45s |
+| Verified timings | see the table below |
 
 ---
+
+## Verified runs
+
+Every number here came from a real run against live Azure, then destroyed. Nothing is estimated.
+
+| | Python `01-hello-world` | C# `01-hello-world` | Python (earlier run) |
+|---|---|---|---|
+| Date | 2026-08-08 | 2026-08-08 | earlier session |
+| `azd provision` | **1m20s** | **1m43s** | 1m25s |
+| `azd deploy` | **2m21s** | **3m1s** | 2m3s |
+| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | — |
+| `azd ai agent eval` | — | — | 3m15s |
+| `azd down --force --purge` | **1m46s** | **1m45s** | 2m11s |
+| Resources created | **2** | **2** | 2 |
+| RG-scope role assignments | **0** | **0** | — |
+
+What to take from this:
+
+- **Two resources, every time.** Language and run do not change the footprint — one
+  `Microsoft.CognitiveServices` account plus one nested project. See [cost](cost.md).
+- **Under 5 minutes, cold to serving.** Both languages. Rebuilding an environment is cheap, so
+  there is no reason to leave one running.
+- **Timings vary ±20% run to run.** The Python run was *faster* to provision and deploy but
+  *slower* on first invoke — with a single sample each, that is noise, not a language ranking.
+  Treat these as orders of magnitude, not benchmarks.
+- **First invoke is always the slow one** — cold start plus a managed-identity token fetch. See
+  [observability](observability.md).
+- **Zero role assignments, both runs.** The golden path runs on *inherited* permissions. See
+  [identity & RBAC](identity-and-rbac.md).
+
 
 ## The commands you'll actually type
 

@@ -24,6 +24,7 @@ Available Commands:
   sample      Browse the curated catalog of agent samples and azd templates.
   sessions    Manage sessions for a hosted agent endpoint.
   show        Show the status of a hosted agent.
+  version     Prints the version of the application
 ```
 
 > [!IMPORTANT]

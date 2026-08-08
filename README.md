@@ -156,7 +156,7 @@ flowchart LR
 |---|---|---|
 | init | `azd ai agent init` | **Create Agent** wizard |
 | provision | `azd provision` | Foundry Project Setup |
-| run | `azd ai agent run` → **:8088** | `F5` → Agent Inspector → **:8087** |
+| run | `azd ai agent run` → agent **:8088** + Inspector UI **:8087** | `F5` → Agent Inspector (debugpy **:5679**) |
 | deploy | `azd deploy` | **Deploy Hosted Agent** wizard |
 | invoke | `azd ai agent invoke` | Agent Playground |
 | eval | `azd ai agent eval` | **Evaluation** view |

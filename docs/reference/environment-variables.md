@@ -54,14 +54,36 @@ Verified dump after a successful provision:
 | `ENABLE_CAPABILITY_HOST` | `false` | |
 | `AZURE_FOUNDRY_NETWORK_MODE` | `none` | `none` \| managed networking |
 | `AZURE_FOUNDRY_MANAGED_ISOLATION_MODE` | `` | set for isolated networking |
-| `AZD_AGENT_SKIP_ACR` | `true` | `true` in code deploy mode — no registry created |
-| `AZD_RESOURCE_TOKEN_SALT` | `b9dd475c` | salt for generated resource names |
-| `USE_EXISTING_AI_PROJECT` | `false` | `true` when you passed `--project-id` |
 | `AI_AGENT_PENDING_PROVISION` | `""` | `"project"` before provisioning; cleared after |
 | `AZURE_CONTAINER_REGISTRY_ENDPOINT` | `""` | populated only in container mode |
 | `AZURE_CONTAINER_REGISTRY_RESOURCE_ID` | `""` | " |
 | `AZURE_AI_PROJECT_ACR_CONNECTION_NAME` | `""` | " |
 | `AZURE_AI_PROJECT_CONNECTION_NAMES` | `""` | comma list of project connections |
+
+---
+
+## Written by `azd ai agent init` — **not** by provision
+
+These three are written into `.azure/<env>/.env` at **scaffold time**. This distinction is not
+cosmetic — see the warning below.
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `AZD_AGENT_SKIP_ACR` | `true` | `true` in code deploy mode — no registry created |
+| `AZD_RESOURCE_TOKEN_SALT` | `3bb69824` | salt for generated resource names |
+| `USE_EXISTING_AI_PROJECT` | `false` | `true` when you passed `--project-id` |
+
+> [!WARNING]
+> **`azd env new` does not give you the same environment as `azd ai agent init`.**
+> Verified two ways: a captured `azd ai agent init` run (no provision) writes all three; a live
+> `azd env new` + `azd provision` run has **none** of them, even after provisioning succeeded.
+>
+> So if you scaffold by hand — or pick up a repo where the sample is already committed, which is
+> exactly the case for [this repo's samples](../../samples/) — your environment starts in a
+> *different state* from one `init` produced. Both provisioned fine here, so this is not a
+> blocker; it is a reason not to trust "it worked on my machine" when the two machines
+> bootstrapped differently. `AZD_AGENT_SKIP_ACR` in particular is an **init-time marker**, not a
+> provision output: its absence does **not** mean an ACR will be created.
 
 ---
 

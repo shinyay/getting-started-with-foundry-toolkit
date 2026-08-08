@@ -132,16 +132,40 @@ azd env set TOOLBOX_ENDPOINT "<endpoint from show>"
 > and never changes which version is the default; promote one with
 > `azd ai toolbox publish <toolbox> <version>`. `azd ai toolbox versions` inspects them.
 
-Four of the six tools in `toolbox.yaml` need a **project connection** to exist first
-(`ghmcppat`, `langmcpconn`, `foundrymcpconn`). List what your project already has:
+Three of the six tools in `toolbox.yaml` reference a **project connection** by name
+(`ghmcppat`, `langmcpconn`, `foundrymcpconn`). List what your project actually has:
 
 ```bash
 ./scripts/list-foundry-connectors.sh        # or .ps1 on Windows
 ```
 
-Trim `toolbox.yaml` down to the tools whose connections you actually have — `web_search`,
-`code_interpreter` and the no-auth `noauth_mcp` server need none, and are enough to see the
-concept work.
+> [!IMPORTANT]
+> **`create` does not validate those connections — verified live on 2026-08-08.** Running it
+> against a project with none of them still succeeded:
+>
+> ```text
+> toolbox create: resolved project endpoint https://cog-<token>.services.ai.azure.com/api/projects/rdpy (source=azdEnv)
+> Created toolbox agent-tools at version 1.
+> Endpoint: https://cog-<token>.services.ai.azure.com/api/projects/rdpy/toolboxes/agent-tools/versions/1/mcp?api-version=v1
+> exit_code=0
+> ```
+>
+> So **exit code 0 from `toolbox create` is not proof your tools work.** Creation *packages a
+> definition*; the connections are resolved later, when an agent actually calls a tool. A broken
+> reference fails at **invoke time**, not at create time — which is a much worse place to find it.
+>
+> Two practical consequences:
+> - Don't gate CI on `toolbox create` succeeding. It nearly always will.
+> - Verify wiring with `azd ai agent doctor` (it has a dedicated toolbox-endpoint check) and by
+>   actually invoking the agent.
+
+Note the endpoint shape — `/toolboxes/<name>/versions/<n>/mcp` — it is **version-pinned**. That
+is the immutability above made concrete: consumers address a specific version, so publishing a
+new one cannot silently change behaviour underneath a running agent.
+
+For a first run, trim `toolbox.yaml` to the tools that need no connection at all —
+`web_search`, `code_interpreter`, and the no-auth `noauth_mcp` server. That is enough to see the
+concept work end to end, and it removes the failure mode above entirely.
 
 If you omit it, `FoundryToolbox` falls back to `FOUNDRY_PROJECT_ENDPOINT` + `TOOLBOX_NAME`.
 

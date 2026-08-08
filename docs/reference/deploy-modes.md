@@ -12,12 +12,14 @@ container image you already built somewhere else.
 | Captured `azd ai agent init --help` | deploy-mode, code settings and `--image` help text |
 | Captured Bicep eject | `acr.bicep`, `acr-pull-role-assignment.bicep`, `resources.bicep`, `main.parameters.json` |
 | Captured generated sample | `azure.yaml`, `Dockerfile`, `.azdignore`, `.dockerignore`, `requirements.txt` |
+| Captured init environments | Bicep/Terraform `.azure/agent-framework-agent-basic-responses-dev/.env` files written by `azd ai agent init` |
+| Live C# environment | `live/env-csharp.txt`, created via `azd env new` before provision/deploy |
 | Existing docs | [`azure-yaml.md`](./azure-yaml.md), [`environment-variables.md`](./environment-variables.md), [`azd-cli.md`](./azd-cli.md), [`../guide-cli/README.md`](../guide-cli/README.md) |
 
 > [!NOTE]
-> The exact resource count for code mode comes from the repo's existing verified guide text and
-> the user-provided evidence for this task. Container and BYO-image resource rows below are marked
-> as inferred where no real provision was run for this page.
+> Code mode was verified by a live Azure run of the C# sample. Container mode was **not** run
+> live for this page; any claim about resources it creates is labelled as an inference from
+> ejected Bicep or CLI help.
 
 ---
 
@@ -89,20 +91,52 @@ The captured manifest did not include `dependencyResolution`, but existing docs 
 
 ### Code mode resources
 
-✅ Verified for the basic sample: code mode set `AZD_AGENT_SKIP_ACR=true` and produced only two
-Azure resources during provision:
+✅ Verified by the live C# sample run: code mode produced exactly two Azure resources after
+`azd provision` + `azd deploy`.
 
 ```text
-cog-czn5ugi4jtvzs                                   Microsoft.CognitiveServices/accounts
-cog-czn5ugi4jtvzs/agent-framework-agent-basic-resp  …/accounts/projects
+Name
+----------------------
+cog-m3ln646lhfgcu
+cog-m3ln646lhfgcu/rdcs
 ```
+
+The same live environment dump showed `AZURE_CONTAINER_REGISTRY_ENDPOINT=""`,
+`AZURE_CONTAINER_REGISTRY_RESOURCE_ID=""`, `AZURE_AI_PROJECT_ACR_CONNECTION_NAME=""`,
+`ENABLE_CAPABILITY_HOST="false"`, `ENABLE_HOSTED_AGENTS="true"`, and
+`AZURE_FOUNDRY_NETWORK_MODE="none"`.
+
+The init-time environments add one more subtle fact. Both captured Bicep and Terraform init
+runs wrote `AZD_AGENT_SKIP_ACR="true"` before any provision happened:
+
+```text
+AI_AGENT_PENDING_PROVISION="project"
+AZD_AGENT_SKIP_ACR="true"
+AZD_RESOURCE_TOKEN_SALT="3bb69824"
+AZURE_ENV_NAME="agent-framework-agent-basic-responses-dev"
+AZURE_RESOURCE_GROUP="rg-agent-framework-agent-basic-responses-dev-3bb69824"
+USE_EXISTING_AI_PROJECT="false"
+```
+
+> [!NOTE]
+> `AZD_AGENT_SKIP_ACR="true"` is written by `azd ai agent init`, not by `azd provision`.
+> The live C# run was bootstrapped with `azd env new` against an already-scaffolded in-repo
+> sample, so `AZD_AGENT_SKIP_ACR` was absent there — but provision still created no ACR
+> (`AZURE_CONTAINER_REGISTRY_ENDPOINT=""`, exactly two resources). Absence of this marker does
+> **not** mean ACR will be created.
+>
+> Practical consequence: `azd env new` and `azd ai agent init` do not produce identical starting
+> states. Init also wrote `AZD_RESOURCE_TOKEN_SALT`, `AI_AGENT_PENDING_PROVISION`, and
+> `USE_EXISTING_AI_PROJECT`; a CI environment bootstrapped differently from a laptop can start
+> from different azd variables even when both paths work.
 
 | Resource | Created? | Evidence |
 |---|---:|---|
-| Foundry / AIServices account | ✅ | Existing verified guide output. |
-| Foundry project | ✅ | Existing verified guide output. |
-| Azure Container Registry | ❌ | `AZD_AGENT_SKIP_ACR=true` and no ACR in verified resource list. |
-| Key Vault / Storage / App Service | ❌ for the basic run | Existing guide states none were created unless opting into container mode or extra connections. |
+| Foundry / AIServices account | ✅ | Live resource list plus `AZURE_AI_ACCOUNT_NAME="cog-m3ln646lhfgcu"`; account kind/sku verified as `AIServices`/`S0` in sibling cost evidence. |
+| Foundry project | ✅ | Live resource list plus `AZURE_AI_PROJECT_NAME="rdcs"`. |
+| Azure Container Registry | ❌ | Init `.env` wrote `AZD_AGENT_SKIP_ACR="true"`; the live env lacked that marker but still had `AZURE_CONTAINER_REGISTRY_ENDPOINT=""` and no registry in the resource list. |
+| Application Insights | ❌ | No App Insights resource in the live resource list; sibling observability page confirms no `APPLICATIONINSIGHTS_CONNECTION_STRING`. |
+| Storage / Cosmos DB / AI Search / VNet | ❌ for the basic run | Exactly two resources were listed; `ENABLE_CAPABILITY_HOST="false"` and `AZURE_FOUNDRY_NETWORK_MODE="none"`. |
 
 > [!NOTE]
 > The agent itself is deployed later by `azd deploy` as a project child/version, not as a
@@ -122,11 +156,10 @@ cog-czn5ugi4jtvzs/agent-framework-agent-basic-resp  …/accounts/projects
 
 ## Container mode
 
-Container mode uses a Dockerfile. The captured sample includes a Dockerfile even though its
-manifest is code-mode shaped; the existing [`azure-yaml.md`](./azure-yaml.md) says the
-Dockerfile is **container mode only — unused in code mode**. The task evidence states that every
-generated sample ships a Dockerfile; I independently inspected the generated Dockerfile for the
-basic Python sample below.
+Container mode uses a Dockerfile. The captured basic Python sample includes a Dockerfile even
+though its manifest is code-mode shaped; the existing [`azure-yaml.md`](./azure-yaml.md) says the
+Dockerfile is **container mode only — unused in code mode**. That means the file's presence is
+not evidence that the verified code-mode live run used a container image.
 
 <details open>
 <summary>✅ Verified generated Dockerfile</summary>
@@ -182,7 +215,11 @@ CMD ["python", "main.py"]
 
 ### Container mode resources
 
-The captured Bicep shows what appears when ACR is used.
+> [!NOTE]
+> Inferred from the Bicep template, not observed in a live run. Container mode was not provisioned
+> for this page, so the exact live resource count is unknown.
+
+The captured Bicep shows what appears when `includeAcr` is true.
 
 | Resource | Created? | Evidence |
 |---|---:|---|
@@ -199,11 +236,17 @@ The captured Bicep shows what appears when ACR is used.
 ```bicep
 @description('Include an Azure Container Registry. Set true when any agent uses docker:.')
 param includeAcr bool = false
+```
 
+```bicep
 module acr 'acr.bicep' = if (includeAcr) {
   name: 'acr'
   params: {
+    location: location
+    tags: tags
     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
+    foundryAccountName: foundryAccount.name
+    foundryProjectName: foundryAccount::project.name
     foundryProjectPrincipalId: foundryAccount::project.identity.principalId
     enableNetworkIsolation: enableNetworkIsolation
   }
@@ -212,20 +255,23 @@ module acr 'acr.bicep' = if (includeAcr) {
 
 ```bicep
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: name
+  location: location
+  tags: tags
   sku: {
     name: 'Premium'
+  }
+  identity: {
+    type: 'SystemAssigned'
   }
   properties: {
     adminUserEnabled: false
     publicNetworkAccess: enableNetworkIsolation ? 'Disabled' : 'Enabled'
+    zoneRedundancy: 'Disabled'
   }
 }
 ```
 </details>
-
-> [!WARNING]
-> The actual container-mode resource count was not verified by running `azd provision` for this
-> page. The resource list above is inferred from ejected Bicep that was read directly.
 
 ### Container mode trade-offs
 
@@ -260,10 +306,15 @@ azd ai agent init --no-prompt --agent-name my-agent \
 
 ### BYO-image resources
 
+> [!NOTE]
+> Inferred from CLI help and normal project provisioning, not observed in a live BYO-image run.
+> The help text directly supports the Dockerfile/ACR rows; the account/project rows assume you
+> are provisioning a new project rather than passing an existing one.
+
 | Resource | Created by toolkit? | Evidence / confidence |
 |---|---:|---|
-| Foundry / AIServices account | ✅ if provisioning a new project | Inferred from normal project service provisioning. |
-| Foundry project | ✅ if provisioning a new project | Inferred from normal project service provisioning. |
+| Foundry / AIServices account | ✅ if provisioning a new project | Inferred from normal project service provisioning, not live-observed for BYO-image. |
+| Foundry project | ✅ if provisioning a new project | Inferred from normal project service provisioning, not live-observed for BYO-image. |
 | Dockerfile | ❌ | Help text says Dockerfile generation is skipped. |
 | ACR setup | ❌ | Help text says ACR setup is skipped. |
 | Your registry/image | ❌ | You bring the image URL; creation is outside this init path. |
@@ -307,11 +358,11 @@ in the captured Bicep project I inspected.
 | Source ZIP upload | ✅ | ❌ | ❌ |
 | Dockerfile used | ❌ | ✅ | ❌ generated by toolkit |
 | Pre-built image URL | ❌ | ❌ | ✅ |
-| Foundry account | ✅ | ✅ | ✅ if not using existing project |
-| Foundry project | ✅ | ✅ | ✅ if not using existing project |
+| Foundry account | ✅ verified | ✅ inferred | ✅ inferred if not using existing project |
+| Foundry project | ✅ verified | ✅ inferred | ✅ inferred if not using existing project |
 | ACR created by toolkit | ❌ verified for basic code run | ✅ inferred when `includeAcr` is true | ❌ per help text |
-| ACR connection | ❌ | ✅ inferred from Bicep | ❌ setup skipped by init path |
-| Registry cost | ❌ for basic code run | ✅ possible/likely | External to toolkit |
+| ACR connection | ❌ verified for basic code run | ✅ inferred from Bicep | ❌ setup skipped by init path |
+| Registry cost | ❌ for basic code run | ✅ inferred if toolkit creates ACR | External to toolkit |
 | Best for | First deployment and most agents | Custom runtime/image needs | Enterprise image pipelines |
 
 ---
@@ -321,7 +372,8 @@ in the captured Bicep project I inspected.
 | Mistake | Symptom | Fix |
 |---|---|---|
 | Expecting Dockerfile changes to affect code mode | Deploy ignores your Dockerfile | Use container mode or BYO-image. |
-| Expecting ACR in code mode | No `AZURE_CONTAINER_REGISTRY_ENDPOINT` | That is expected; `AZD_AGENT_SKIP_ACR=true`. |
+| Treating `AZD_AGENT_SKIP_ACR` as a provision output | Marker present after `init`, absent after `azd env new` | It is an init-time marker. Check `AZURE_CONTAINER_REGISTRY_ENDPOINT` and the resource list to verify whether ACR exists. |
+| Expecting ACR in code mode | `AZURE_CONTAINER_REGISTRY_ENDPOINT=""` | That is expected for the verified basic code run; no ACR was created. |
 | Using `--image` with `--deploy-mode code` | CLI rejects the combination | Pick BYO-image or code mode, not both. |
 | Assuming BYO-image creates a registry | No generated ACR setup | Create/manage the registry yourself or use container mode. |
 | Forgetting runtime/entry point in non-interactive code init | Init cannot resolve required values | Pass `--runtime` and `--entry-point`. |
@@ -357,11 +409,12 @@ azd ai agent init --no-prompt \
 
 | Phase | Code mode | Container mode | BYO-image |
 |---|---|---|---|
-| `azd provision` | Creates account/project/model infrastructure; no ACR in verified basic run. | Creates account/project/model plus ACR pieces when ACR is included. | Creates account/project/model if not using an existing project; registry is external. |
-| `azd deploy` | Uploads source/package and creates a new agent version. | Builds/pushes image, then creates a new agent version. | Uses the provided image URL to create a new agent version. |
-| `azd down` | Deletes provisioned Azure resources for the environment. | Also needs to remove registry resources if they were provisioned. | Does not own the external image registry. |
+| `azd provision` | Creates account/project/model infrastructure; no ACR in verified basic run. | Inferred: creates account/project/model plus ACR pieces when ACR is included. | Inferred: creates account/project/model if not using an existing project; registry is external. |
+| `azd deploy` | Uploads source/package and creates a new agent version. | Inferred: builds/pushes image, then creates a new agent version. | Inferred from `--image` help: uses the provided image URL to create a new agent version. |
+| `azd down` | Deletes provisioned Azure resources for the environment. | Inferred: also removes registry resources if they were provisioned. | Inferred: does not own the external image registry. |
 
 > [!NOTE]
+> Inferred from help and ejected templates, not observed in a live run for container or BYO-image.
 > The exact remote deploy implementation is preview behaviour. Verify with
 > [`azd ai agent show --output json`](./azd-cli.md#show) and the diagnostics in
 > [`troubleshooting.md`](./troubleshooting.md) for your project.
@@ -373,6 +426,6 @@ azd ai agent init --no-prompt \
 - 👉 [`infrastructure.md`](./infrastructure.md) — ejected Bicep/Terraform files and ACR modules
 - 👉 [`azure-yaml.md`](./azure-yaml.md) — `codeConfiguration`, `container.resources`, `infra.provider`
 - 👉 [`azd-cli.md`](./azd-cli.md) — `init`, `--deploy-mode` and `--image` flags
-- 👉 [`environment-variables.md`](./environment-variables.md) — `AZD_AGENT_SKIP_ACR` and ACR outputs
+- 👉 [`environment-variables.md`](./environment-variables.md) — code-mode environment values, init markers and ACR outputs
 - 👉 [`../guide-cli/README.md`](../guide-cli/README.md) — verified CLI walkthrough
 - 👉 [`troubleshooting.md`](./troubleshooting.md) — provision/deploy diagnostics
