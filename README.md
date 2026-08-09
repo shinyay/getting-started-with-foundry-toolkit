@@ -3,6 +3,7 @@
 > **Ship your first AI agent to Azure in about ten minutes — then understand every command you just ran.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://gist.githubusercontent.com/shinyay/56e54ee4c0e22db8211e05e70a63247e/raw/f3ac65a05ed8c8ea70b653875ccac0c6dbc10ba1/LICENSE)
+[![Release](https://img.shields.io/badge/release-v2026.08.0-blue)](CHANGELOG.md)
 [![azd](https://img.shields.io/badge/azd-%E2%89%A5%201.27.1-0078D4)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
 [![Python](https://img.shields.io/badge/Python-3.13%20%7C%203.14-3776AB?logo=python&logoColor=white)](samples/python/)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](samples/csharp/)
@@ -13,9 +14,13 @@ and the VS Code extension, with a 4-step **Python** sample ladder and **C#** cod
 every output block was captured from a **real run against real Azure** — not copied from docs.
 
 > [!NOTE]
-> Verified **2026-08-09** against `azd 1.30.0` · `azure.ai.agents 1.0.0-beta.9` ·
-> `azure.ai.toolboxes 1.0.0-beta.5` · `azure.ai.inspector 1.0.0-beta.3` · `azure.ai.projects 1.0.0-beta.5`.
+> **Release `v2026.08.0`** · verified **2026-08-09** against `azd 1.30.0` ·
+> `azure.ai.agents 1.0.0-beta.9` · `azure.ai.connections 1.0.0-beta.4` ·
+> `azure.ai.inspector 1.0.0-beta.3` · `azure.ai.projects 1.0.0-beta.5` ·
+> `azure.ai.toolboxes 1.0.0-beta.5`.
 > Hosted agents and `azd ai agent` are in **preview**; details shift between versions.
+> This repo uses **CalVer** so you can see its age at a glance — see the
+> [changelog](CHANGELOG.md). If your installed versions differ, trust your local `--help`.
 
 ---
 
@@ -289,6 +294,9 @@ Found a bug, or has the preview moved on? [Open an issue](https://github.com/shi
 
 Because this guide's value is that its output is **real**, please re-run the command and paste
 the actual output when correcting a verified block.
+
+Contributor rules and the nine local validation checks are in [`AGENTS.md`](AGENTS.md).
+Release history and the CalVer policy are in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
