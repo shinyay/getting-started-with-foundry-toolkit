@@ -1,29 +1,27 @@
 # 02 · Tools
 
-> **New idea:** the agent stops just talking and starts *doing*.
+> ⏱️ **20 min** · 📋 **Requires:** [01 · Hello World](../01-hello-world/) · 💰 **token + hosted-agent compute** · ☁️ **Creates 2 Azure resources**
 
-A tool is an ordinary Python function. The `@tool` decorator exposes it to the model; the
-Agent Framework handles schema generation, the call loop and result plumbing.
+Add a local Python function so the agent can do something instead of only chatting.
 
----
+## What you'll learn
 
-## Scaffold it
+- Expose an ordinary Python function as an Agent Framework tool.
+- Understand why docstrings and parameter descriptions are prompt surface.
+- Compare a prompt that should call a tool with one that should not.
+- Deploy without registering tools separately in Foundry.
+
+## Steps
+
+### 1. Open this sample
 
 ```bash
-mkdir 02-tools && cd 02-tools
-azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/02-tools/azure.yaml"
+cd samples/python/02-tools
 ```
 
----
-
-## The only real change from 01
+### 2. Inspect the only real change from 01
 
 ```python
-from agent_framework import Agent, tool
-from pydantic import Field
-from typing_extensions import Annotated
-
-
 @tool(approval_mode="never_require")
 def get_weather(
     location: Annotated[str, Field(description="The location to get the weather for.")],
@@ -32,121 +30,86 @@ def get_weather(
     conditions = ["sunny", "cloudy", "rainy", "stormy"]
     return f"The weather in {location} is {conditions[randint(0, 3)]} with a high of {randint(10, 30)}°C."
 
-
 agent = Agent(
     client=client,
     instructions="You are a friendly assistant. Keep your answers brief.",
-    tools=[get_weather],          # ← the whole difference
+    tools=[get_weather],
     default_options={"store": False},
 )
 ```
 
-### How the model learns what the tool does
-
 | Source | Becomes |
 |---|---|
-| function **name** | the tool name |
-| **docstring** | the tool description — *the model reads this to decide when to call it* |
-| `Annotated[str, Field(description=…)]` | the parameter's JSON-schema description |
+| function name | the tool name |
+| docstring | the tool description the model reads |
+| `Annotated[..., Field(description=...)]` | the parameter schema description |
 | return type | the result contract |
 
-> [!TIP]
-> The docstring and `Field(description=…)` are **prompt engineering**, not documentation.
-> Vague descriptions are the most common cause of "the agent won't use my tool".
+`approval_mode="never_require"` is appropriate here because the tool is safe and read-only.
+Use approval for anything that writes, spends money, or sends messages.
 
-### `approval_mode`
-
-| Value | Behaviour |
-|---|---|
-| `"never_require"` | call it silently — right for safe, read-only lookups |
-| *(default)* | the host may require human approval before executing |
-
-Use approval for anything that writes, spends money or sends messages.
-
----
-
-## Run it
+### 3. Provision and run locally
 
 ```bash
+azd env set AZURE_SUBSCRIPTION_ID <your-subscription-id>
+azd env set AZURE_LOCATION eastus2
 azd provision
 azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 azd ai agent run --no-client
 ```
 
+### 4. Invoke prompts that should and should not use the tool
+
 ```bash
 azd ai agent invoke --local "What's the weather in Tokyo?"
+azd ai agent invoke --local "What is 2+2?"
 ```
 
-The agent will call `get_weather("Tokyo")` and phrase the result. Compare:
+Run without `--no-client` if you want Agent Inspector to show the call/result timeline.
 
-```bash
-azd ai agent invoke --local "What is 2+2?"        # no tool call — the model just answers
-```
-
-Watch the tool call happen:
-
-```bash
-azd ai agent run          # (no --no-client) → Agent Inspector shows the call/result timeline
-```
-
----
-
-## Adding your own tool
-
-```python
-@tool(approval_mode="never_require")
-def get_stock_price(
-    symbol: Annotated[str, Field(description="Ticker symbol, e.g. MSFT.")],
-) -> str:
-    """Look up the latest closing price for a stock ticker."""
-    return f"{symbol} closed at $432.10."
-
-agent = Agent(client=client, instructions="…", tools=[get_weather, get_stock_price], …)
-```
-
-Three rules that matter:
-
-1. **Return a string** (or something trivially serialisable) — it goes back into the prompt.
-2. **Raise informative exceptions.** The model sees the error and can retry or explain.
-3. **Keep tools fast.** Every call is inside the user's latency budget.
-
----
-
-## Deploy
+### 5. Deploy and monitor
 
 ```bash
 azd deploy
 azd ai agent invoke "What's the weather in Osaka?"
-azd ai agent monitor -f        # watch the tool call server-side
-```
-
-Tools run **inside your container** — same code, same process. Nothing is registered with
-Foundry, so there is no extra deployment step.
-
----
-
-## Local tools vs catalog tools
-
-| | Local tools *(this sample)* | Catalog / Toolbox tools *(next)* |
-|---|---|---|
-| Defined in | your source | Foundry / MCP servers |
-| Runs in | your container | external service |
-| Version with | your code | independently |
-| Best for | business logic, private APIs | search, code interpreter, shared capabilities |
-
----
-
-## Clean up
-
-```bash
+azd ai agent monitor -f
 azd down --force --purge
 ```
 
----
+Tools run inside your container. Nothing is registered with Foundry as a separate tool resource.
 
-👉 Next: [03 · MCP & Foundry Toolbox](../03-mcp-toolbox/) — tools you didn't write.
+## ✅ Checkpoint
 
----
+From this directory, verify that the manifest points at a real source folder:
+
+```bash
+python3 -c "import os,yaml; d=yaml.safe_load(open('azure.yaml')); s=d['services']['tools-agent']; print(s['project'], os.path.isdir(s['project']))"
+```
+
+```text
+src/tools-agent True
+```
+
+If you see something else, jump to *If that didn't work* below.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Weather prompts never use the tool. | The tool name/docstring/parameter descriptions are the model's tool prompt. | Keep descriptions specific and ask for weather in a location. |
+| `KeyError: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'` | The model env var was not set. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| Inspector does not open. | You started with `--no-client`. | Run `azd ai agent run` without `--no-client`. |
+
+## ✏️ Exercise
+
+Predict whether `azd ai agent invoke --local "What is 2+2?"` should call `get_weather`.
+
+<details>
+<summary>Solution</summary>
+
+It should not call the tool. The prompt does not mention weather or a location, so the model can
+answer directly.
+</details>
 
 ## Provenance
 
@@ -161,3 +124,7 @@ This sample is **adapted from upstream**, not invented here. Exact mapping so yo
 
 Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
 Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.
+
+## → Next
+
+[03 · MCP & Foundry Toolbox](../03-mcp-toolbox/)

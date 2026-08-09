@@ -396,5 +396,5 @@ The captured runs used a sample unified `azure.yaml`; the logs show adoption of 
 - 👉 [`azure-yaml.md`](./azure-yaml.md) — manifest fields that drive ejection
 - 👉 [`azd-cli.md`](./azd-cli.md) — CLI flags and examples
 - 👉 [`environment-variables.md`](./environment-variables.md) — outputs written by provisioning
-- 👉 [`../guide-cli/README.md`](../guide-cli/README.md) — end-to-end CLI flow
+- 👉 [`../tutorial/02-first-agent.md`](../tutorial/02-first-agent.md) — end-to-end CLI flow
 - 👉 [`troubleshooting.md`](./troubleshooting.md) — known failures and fixes

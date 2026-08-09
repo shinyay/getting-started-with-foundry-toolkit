@@ -1,11 +1,16 @@
 name: validate
 
-# Keeps the repo honest without a human re-reading it. Three cheap checks:
+# Keeps the repo honest without a human re-reading it. Seven cheap checks:
 #   1. every relative markdown link resolves
 #   2. every YAML file parses
 #   3. every azure.yaml `project:` path actually exists on disk
-# (3) is the one that matters most — it is the exact defect class that shipped
-# a broken C# sample in the first place.
+#   4. every tutorial lab carries the lab skeleton (metadata, checkpoint, next)
+#   5. no doc page is orphaned — everything is reachable from README.md
+#   6. eval assets live in the service `project:` dir, not the sample root
+#   7. version claims agree with the canonical table in docs/reference/README.md
+# (3) caught a shipped-broken C# sample. (6) caught an unrunnable eval sample.
+# (7) exists because a preview version number appearing in 14 files is 14 places to drift.
+# Structure that isn't enforced decays.
 
 on:
   push:
@@ -79,5 +84,135 @@ jobs:
           for b in bad:
               print(f"::error::{b}")
           print(f"{len(bad)} unresolved service path(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check tutorial labs carry the lab skeleton
+        run: |
+          python - <<'PY'
+          import glob, os, re, sys
+          bad = []
+          for f in sorted(glob.glob('docs/tutorial/*.md')):
+              base = os.path.basename(f)
+              if base == 'README.md':
+                  continue
+              t = open(f).read()
+              if not re.search(r'^> ⏱️ \*\*', t, re.M):
+                  bad.append(f"{f}: missing '> ⏱️ **<time>**' metadata line")
+              if '## ✅ Checkpoint' not in t:
+                  bad.append(f"{f}: missing '## ✅ Checkpoint'")
+              if '## → Next' not in t:
+                  bad.append(f"{f}: missing '## → Next'")
+              if '## 🔧 If that didn' not in t:
+                  bad.append(f"{f}: missing '## 🔧 If that didn't work'")
+          for b in bad:
+              print(f"::error::{b}")
+          print(f"{len(bad)} lab-structure problem(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check no doc page is orphaned
+        run: |
+          python - <<'PY'
+          import glob, os, re, sys
+          pages = {os.path.normpath(f) for f in glob.glob('docs/**/*.md', recursive=True)}
+          linked, seen = set(), set()
+          queue = ['README.md']
+          while queue:
+              f = queue.pop()
+              if f in seen or not os.path.exists(f):
+                  continue
+              seen.add(f)
+              d = os.path.dirname(f)
+              for m in re.finditer(r'\[[^\]]*\]\(([^)#][^)]*)\)', open(f).read()):
+                  t = m.group(1).split('#')[0].strip()
+                  if not t or t.startswith(('http', 'mailto')):
+                      continue
+                  p = os.path.normpath(os.path.join(d, t))
+                  if os.path.isdir(p):
+                      p = os.path.join(p, 'README.md')
+                  if p.endswith('.md'):
+                      linked.add(p)
+                      queue.append(p)
+          orphans = sorted(pages - linked)
+          for o in orphans:
+              print(f"::error::orphan page (unreachable from README.md): {o}")
+          print(f"{len(orphans)} orphan page(s)")
+          sys.exit(1 if orphans else 0)
+          PY
+
+      - name: Check eval assets live in the service project dir
+        run: |
+          python - <<'PY'
+          import glob, os, sys, yaml
+          # Verified 2026-08-09: `azd ai agent eval` resolves eval.yaml and every
+          # local_uri against the service `project:` dir, never the sample root.
+          bad = []
+          for f in glob.glob('samples/**/azure.yaml', recursive=True):
+              root = os.path.dirname(f)
+              if os.path.exists(os.path.join(root, 'eval.yaml')):
+                  bad.append(f"{root}: eval.yaml is in the sample root; it must live in the service project dir")
+              doc = yaml.safe_load(open(f)) or {}
+              for name, svc in (doc.get('services') or {}).items():
+                  proj = (svc or {}).get('project')
+                  if not proj:
+                      continue
+                  ev = os.path.join(root, proj, 'eval.yaml')
+                  if not os.path.exists(ev):
+                      continue
+                  e = yaml.safe_load(open(ev)) or {}
+                  base = os.path.join(root, proj)
+                  ds = (e.get('dataset') or {}).get('local_uri')
+                  if ds and not os.path.exists(os.path.join(base, ds)):
+                      bad.append(f"{ev}: dataset local_uri '{ds}' does not resolve under {proj}")
+                  for ev_item in (e.get('evaluators') or []):
+                      u = (ev_item or {}).get('local_uri')
+                      if u and not os.path.exists(os.path.join(base, u)):
+                          bad.append(f"{ev}: evaluator local_uri '{u}' does not resolve under {proj}")
+          for b in bad:
+              print(f"::error::{b}")
+          print(f"{len(bad)} eval-layout problem(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check version claims agree with the canonical table
+        run: |
+          python - <<'PY'
+          import glob, re, sys
+          # docs/reference/README.md "Fast facts" is the single source of truth for versions.
+          # Any other page that states a version for these must state the SAME one.
+          canon = open('docs/reference/README.md').read()
+          pinned = {}
+          m = re.search(r'Minimum `azd` \| \*\*([0-9.]+)\*\*', canon)
+          if m:
+              pinned['azd-floor'] = m.group(1)
+          for ext in ('azure.ai.agents', 'azure.ai.connections', 'azure.ai.inspector',
+                      'azure.ai.projects', 'azure.ai.toolboxes'):
+              m = re.search(re.escape('`' + ext + '` `') + r'([0-9][0-9A-Za-z.\-]*)`', canon)
+              if m:
+                  pinned[ext] = m.group(1)
+          if not pinned:
+              print('::error::could not parse the canonical version table')
+              sys.exit(1)
+          print('canonical:', pinned)
+
+          bad = []
+          for f in glob.glob('**/*.md', recursive=True):
+              if f == 'docs/reference/README.md':
+                  continue
+              text = open(f).read()
+              for i, line in enumerate(text.splitlines(), 1):
+                  # Skip lines that are deliberately quoting an OLD version to explain a failure.
+                  if 'incompatible' in line or 'installing' in line or 'downgrad' in line:
+                      continue
+                  for ext, want in pinned.items():
+                      if ext == 'azd-floor':
+                          continue
+                      for found in re.findall(re.escape(ext) + r'[` ]+`?([0-9][0-9A-Za-z.\-]*)`?', line):
+                          if found != want:
+                              bad.append(f"{f}:{i}: {ext} stated as '{found}', canonical is '{want}'")
+          for b in bad:
+              print(f"::error::{b}")
+          print(f"{len(bad)} version-drift problem(s)")
           sys.exit(1 if bad else 0)
           PY

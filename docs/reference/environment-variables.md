@@ -44,7 +44,7 @@ Verified dump after a successful provision:
 | **`FOUNDRY_PROJECT_ENDPOINT`** | `https://cog-xxx.services.ai.azure.com/api/projects/<proj>` | ⭐ the endpoint your code uses |
 | `AZURE_AI_PROJECT_ID` | `/subscriptions/…/projects/<proj>` | full ARM resource id |
 | `AZURE_AI_PROJECT_NAME` | `agent-framework-agent-basic-resp` | project name (truncated to 32 chars) |
-| `AZURE_AI_ACCOUNT_NAME` | `cog-czn5ugi4jtvzs` | Cognitive Services account |
+| `AZURE_AI_ACCOUNT_NAME` | `cog-56mzb54ouruu6` | Cognitive Services account |
 | `AZURE_OPENAI_ENDPOINT` | `https://cog-xxx.openai.azure.com/` | OpenAI-compatible endpoint |
 | `AI_PROJECT_DEPLOYMENTS` | `[{"name":"gpt-5.4-mini",…}]` | JSON array of deployments |
 | `AZURE_RESOURCE_GROUP` | `rg-…-b9dd475c` | |
@@ -114,10 +114,31 @@ Available inside the container **without** declaring them:
 | `FOUNDRY_PROJECT_ENDPOINT` | project endpoint |
 | `FOUNDRY_MODEL_NAME` | model name (alternative to `AZURE_AI_MODEL_DEPLOYMENT_NAME`) |
 | `AGENT_*` | agent identity/version |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | injected when the project has an `AppInsights` connection |
 
-> [!CAUTION]
-> **Never declare `AGENT_*` or `FOUNDRY_*` in `environmentVariables`.** You will shadow the
-> runtime's real values and get failures that look like nothing is wrong.
+### 🚫 Reserved — declaring these fails the deploy
+
+> ✅ **Verified 2026-08-09.** Declaring a reserved variable does **not** silently shadow the
+> runtime value. `azd deploy` fails fast with `HTTP 400 invalid_payload`:
+
+```text
+"Environment variable 'APPLICATIONINSIGHTS_CONNECTION_STRING' is reserved for platform use.
+ All FOUNDRY_* and AGENT_* variables are reserved per container-image-spec.
+ Please remove and re-try."
+```
+
+Reserved namespaces, per that message:
+
+| Pattern | Why |
+|---|---|
+| `FOUNDRY_*` | project endpoint, model name, and other platform wiring |
+| `AGENT_*` | agent identity and version, set per instance |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | injected from the project's `AppInsights` connection |
+
+> [!TIP]
+> Fast failure is the good outcome here. To get tracing, attach an **`AppInsights` connection
+> to the project** instead — no `azure.yaml` change and no redeploy needed. See
+> [observability](./observability.md#the-way-that-works).
 
 ---
 

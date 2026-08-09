@@ -83,7 +83,7 @@ mkdir my-agent && cd my-agent
 azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/csharp/hosted-agents/agent-framework/hello-world/azure.yaml"
 ```
 
-Then follow the [CLI golden path](../../docs/guide-cli/README.md).
+Then follow the [CLI golden path](../../docs/tutorial/02-first-agent.md).
 
 ---
 

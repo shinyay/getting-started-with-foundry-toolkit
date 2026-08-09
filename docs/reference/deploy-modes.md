@@ -14,7 +14,7 @@ container image you already built somewhere else.
 | Captured generated sample | `azure.yaml`, `Dockerfile`, `.azdignore`, `.dockerignore`, `requirements.txt` |
 | Captured init environments | Bicep/Terraform `.azure/agent-framework-agent-basic-responses-dev/.env` files written by `azd ai agent init` |
 | Live C# environment | `live/env-csharp.txt`, created via `azd env new` before provision/deploy |
-| Existing docs | [`azure-yaml.md`](./azure-yaml.md), [`environment-variables.md`](./environment-variables.md), [`azd-cli.md`](./azd-cli.md), [`../guide-cli/README.md`](../guide-cli/README.md) |
+| Existing docs | [`azure-yaml.md`](./azure-yaml.md), [`environment-variables.md`](./environment-variables.md), [`azd-cli.md`](./azd-cli.md), [`../tutorial/02-first-agent.md`](../tutorial/02-first-agent.md) |
 
 > [!NOTE]
 > Code mode was verified by a live Azure run of the C# sample. Container mode was **not** run
@@ -28,7 +28,7 @@ container image you already built somewhere else.
 | Choose this mode | When | You provide | Toolkit creates ACR? | Main trade-off |
 |---|---|---|---:|---|
 | **Code mode** | Most Python/.NET agents; fastest path; no custom OS image needed | Source, dependencies, runtime and entry point | ❌ No | Less image-level control, but fewer resources and faster iteration. |
-| **Container mode** | Native packages, custom base image, system tools, exact OS image, heavy build steps | Source plus `Dockerfile` | ✅ Inferred from ejected Bicep when ACR is included | More control, but registry cost and slower build/push loop. |
+| **Container mode** | Native packages, custom base image, system tools, exact OS image, heavy build steps | Source plus `Dockerfile` | ✅ **Verified live** — Premium SKU ACR | More control, but a Premium registry on the bill and ~2× provision time. |
 | **BYO-image** | CI already builds images; enterprise registry workflow; pinned digest/release promotion | Pre-built image URL | ❌ Help says ACR setup is skipped | Maximum control, but you own image build, patching and registry access. |
 
 > [!TIP]
@@ -215,19 +215,89 @@ CMD ["python", "main.py"]
 
 ### Container mode resources
 
-> [!NOTE]
-> Inferred from the Bicep template, not observed in a live run. Container mode was not provisioned
-> for this page, so the exact live resource count is unknown.
-
-The captured Bicep shows what appears when `includeAcr` is true.
+> ✅ **Verified 2026-08-09** against a live container-mode run: `init --deploy-mode container`
+> → `provision` → `deploy` → `invoke` → `down --force --purge`.
 
 | Resource | Created? | Evidence |
 |---|---:|---|
-| Foundry / AIServices account | ✅ | `resources.bicep` creates `Microsoft.CognitiveServices/accounts@2025-06-01`. |
-| Foundry project | ✅ | `resources.bicep` creates the nested `projects` resource. |
-| Model deployments | ✅ when declared | `resources.bicep` loops over `deployments`. |
-| Azure Container Registry | ✅ when `includeAcr` is true | `acr.bicep` creates `Microsoft.ContainerRegistry/registries@2023-07-01`. |
-| ACR project connection | ✅ when `includeAcr` is true | `acr.bicep` creates a project `connections` child with `category: ContainerRegistry`. |
+| Foundry / AIServices account | ✅ | `cog-6kkz3uyx7e75m` (S0) |
+| Foundry project | ✅ | nested `projects` child |
+| Model deployments | ✅ when declared | `gpt-5.4-mini`, GlobalStandard, capacity 10 |
+| Azure Container Registry | ✅ | `cr6kkz3uyx7e75m` — **Premium SKU** |
+| ACR project connection | ✅ | `cr6kkz3uyx7e75m-conn`, `category: ContainerRegistry`, `authType: ManagedIdentity` |
+
+Live resource list:
+
+```text
+cog-6kkz3uyx7e75m                                   Microsoft.CognitiveServices/accounts     S0
+cog-6kkz3uyx7e75m/agent-framework-agent-basic-resp  …/accounts/projects
+cr6kkz3uyx7e75m                                     Microsoft.ContainerRegistry/registries   Premium
+```
+
+> [!CAUTION]
+> **The registry is created at Premium tier, not Basic.** That is the most expensive ACR SKU
+> and it is billed per day for as long as it exists, whether or not you push anything.
+> Container mode is not "code mode plus a Dockerfile" on your bill — see [cost](./cost.md).
+
+**Three extra environment variables** appear after a container-mode `provision`, none of
+which exist in a code-mode run:
+
+```text
+AZURE_CONTAINER_REGISTRY_ENDPOINT="cr6kkz3uyx7e75m.azurecr.io"
+AZURE_CONTAINER_REGISTRY_RESOURCE_ID="/subscriptions/…/registries/cr6kkz3uyx7e75m"
+AZURE_AI_PROJECT_ACR_CONNECTION_NAME="cr6kkz3uyx7e75m-conn"
+```
+
+**The image really is built and pushed.** After `azd deploy`:
+
+```text
+$ az acr repository list -n cr6kkz3uyx7e75m -o table
+agent-framework-agent-basic-responses/agent-framework-agent-basic-responses-…-dev
+
+$ az acr repository show-tags -n cr6kkz3uyx7e75m --repository <above>
+azd-deploy-1786234162
+```
+
+Tags are `azd-deploy-<unix-epoch>` — one per `deploy`, so the registry accumulates an image
+per deployment and nothing prunes them for you.
+
+#### 🔐 The one role assignment the toolkit does create
+
+Code mode creates **zero** role assignments. Container mode creates **one**, and it is not at
+resource-group scope, which is why a group-scoped check misses it:
+
+```text
+$ az role assignment list --scope <resource-group>          → 0
+$ az role assignment list --scope <the ACR resource>        → AcrPull
+```
+
+The `AcrPull` grant goes to the **project's** managed identity, which is a different principal
+from the account's system-assigned identity:
+
+| Principal | Object ID | Gets `AcrPull`? |
+|---|---|---|
+| Project MI — `cog-…/projects/agent-framework-agent-basic-resp` | `7bf1c0e4-…` | ✅ |
+| Account system-assigned MI | `841e9aac-…` | ❌ |
+
+See [identity & RBAC](./identity-and-rbac.md) for why these are distinct.
+
+#### Measured cost of the container tax
+
+| | Code mode | Container mode |
+|---|---:|---:|
+| `azd provision` | 1m20s | **2m39s** |
+| `azd deploy` | 2m21s | **2m40s** |
+| First `invoke` | 14.242s | 11.399s |
+| `azd down --force --purge` | 1m46s | **2m5s** |
+| Resources created | 2 | **3** |
+| Role assignments | 0 | **1** (`AcrPull`, ACR scope) |
+
+Provision roughly **doubles**. The rest is comparable.
+
+> [!TIP]
+> `--deploy-mode container` with `--no-prompt` still requires `-m <manifest>`. Without one it
+> fails with `template selection requires interactive mode` — the deploy mode does not remove
+> the need to choose a sample.
 | AcrPull role assignment | ✅ when `includeAcr` is true | `acr.bicep` grants role id `7f951dda-4ed3-4680-a7ca-43fe172d538d`. |
 
 <details>
@@ -358,11 +428,12 @@ in the captured Bicep project I inspected.
 | Source ZIP upload | ✅ | ❌ | ❌ |
 | Dockerfile used | ❌ | ✅ | ❌ generated by toolkit |
 | Pre-built image URL | ❌ | ❌ | ✅ |
-| Foundry account | ✅ verified | ✅ inferred | ✅ inferred if not using existing project |
-| Foundry project | ✅ verified | ✅ inferred | ✅ inferred if not using existing project |
-| ACR created by toolkit | ❌ verified for basic code run | ✅ inferred when `includeAcr` is true | ❌ per help text |
-| ACR connection | ❌ verified for basic code run | ✅ inferred from Bicep | ❌ setup skipped by init path |
-| Registry cost | ❌ for basic code run | ✅ inferred if toolkit creates ACR | External to toolkit |
+| Foundry account | ✅ verified | ✅ **verified** | ✅ inferred if not using existing project |
+| Foundry project | ✅ verified | ✅ **verified** | ✅ inferred if not using existing project |
+| ACR created by toolkit | ❌ verified for basic code run | ✅ **verified — Premium SKU** | ❌ per help text |
+| ACR connection | ❌ verified for basic code run | ✅ **verified** (`category: ContainerRegistry`) | ❌ setup skipped by init path |
+| Role assignments created | ❌ 0 verified | ✅ **1 verified** — `AcrPull` at ACR scope | External to toolkit |
+| Registry cost | ❌ for basic code run | ✅ **verified — Premium tier, billed daily** | External to toolkit |
 | Best for | First deployment and most agents | Custom runtime/image needs | Enterprise image pipelines |
 
 ---
@@ -409,12 +480,12 @@ azd ai agent init --no-prompt \
 
 | Phase | Code mode | Container mode | BYO-image |
 |---|---|---|---|
-| `azd provision` | Creates account/project/model infrastructure; no ACR in verified basic run. | Inferred: creates account/project/model plus ACR pieces when ACR is included. | Inferred: creates account/project/model if not using an existing project; registry is external. |
-| `azd deploy` | Uploads source/package and creates a new agent version. | Inferred: builds/pushes image, then creates a new agent version. | Inferred from `--image` help: uses the provided image URL to create a new agent version. |
-| `azd down` | Deletes provisioned Azure resources for the environment. | Inferred: also removes registry resources if they were provisioned. | Inferred: does not own the external image registry. |
+| `azd provision` | Creates account/project/model infrastructure; no ACR in verified basic run. | **Verified:** creates account/project/model plus a **Premium** ACR and its project connection. 2m39s. | Inferred: creates account/project/model if not using an existing project; registry is external. |
+| `azd deploy` | Uploads source/package and creates a new agent version. | **Verified:** builds and pushes the image (tag `azd-deploy-<epoch>`), then creates a new agent version. 2m40s. | Inferred from `--image` help: uses the provided image URL to create a new agent version. |
+| `azd down` | Deletes provisioned Azure resources for the environment. | **Verified:** removes the registry too. 2m5s, Azure back to zero. | Inferred: does not own the external image registry. |
 
 > [!NOTE]
-> Inferred from help and ejected templates, not observed in a live run for container or BYO-image.
+> Container mode is **verified live (2026-08-09)**. BYO-image remains inferred from help and ejected templates — no live BYO-image run has been made.
 > The exact remote deploy implementation is preview behaviour. Verify with
 > [`azd ai agent show --output json`](./azd-cli.md#show) and the diagnostics in
 > [`troubleshooting.md`](./troubleshooting.md) for your project.
@@ -427,5 +498,5 @@ azd ai agent init --no-prompt \
 - 👉 [`azure-yaml.md`](./azure-yaml.md) — `codeConfiguration`, `container.resources`, `infra.provider`
 - 👉 [`azd-cli.md`](./azd-cli.md) — `init`, `--deploy-mode` and `--image` flags
 - 👉 [`environment-variables.md`](./environment-variables.md) — code-mode environment values, init markers and ACR outputs
-- 👉 [`../guide-cli/README.md`](../guide-cli/README.md) — verified CLI walkthrough
+- 👉 [`../tutorial/02-first-agent.md`](../tutorial/02-first-agent.md) — verified CLI walkthrough
 - 👉 [`troubleshooting.md`](./troubleshooting.md) — provision/deploy diagnostics

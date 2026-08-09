@@ -1,6 +1,6 @@
 # 📖 Reference
 
-Lookup tables. Read the [guides](../guide-cli/README.md) first; come back here for details.
+Lookup tables. Read the [guides](../tutorial/02-first-agent.md) first; come back here for details.
 
 Twelve pages, grouped by what you are trying to do.
 
@@ -40,10 +40,15 @@ Twelve pages, grouped by what you are trying to do.
 
 ## Fast facts
 
+> 🏷️ **This table is the canonical home for every version, port, tier and runtime in this repo.**
+> Other pages may *use* these values in commands, but they must not *redefine* them. If a number
+> here disagrees with a number elsewhere, this table wins — and the other page is a bug.
+> CI enforces the version rows automatically.
+
 | | |
 |---|---|
 | Minimum `azd` | **1.27.1** (this guide verified on 1.30.0) |
-| Extensions | `azure.ai.agents` `1.0.0-beta.9`, `azure.ai.inspector` `1.0.0-beta.3`, `azure.ai.projects` `1.0.0-beta.5`, `azure.ai.toolboxes` (Beta) |
+| Extensions (5) | `azure.ai.agents` `1.0.0-beta.9`, `azure.ai.connections` `1.0.0-beta.4`, `azure.ai.inspector` `1.0.0-beta.3`, `azure.ai.projects` `1.0.0-beta.5`, `azure.ai.toolboxes` `1.0.0-beta.5` |
 | VS Code extension ID | `ms-windows-ai-studio.windows-ai-studio` |
 | Ports | **8088** agent (`--port`) · **8087** Inspector UI (`--inspector-port`) · **5679** debugpy (AI Toolkit) |
 | Default model | `gpt-5.4-mini`, `GlobalStandard`, capacity 10 |
@@ -59,23 +64,44 @@ Twelve pages, grouped by what you are trying to do.
 
 Every number here came from a real run against live Azure, then destroyed. Nothing is estimated.
 
-| | Python `01-hello-world` | C# `01-hello-world` | Python (earlier run) |
+> **Where each number comes from.** `provision`, `deploy` and `down` are `azd`'s own
+> `SUCCESS: … in N minutes M seconds` line. `invoke` is the CLI's `Server responded in …` line.
+> `eval run` is its `(✓) Done  Eval run  (3m 43s)` line. `eval generate` prints **two** timers
+> rather than a total — `Dataset generation (8m 35s)` plus `Evaluator generation (16 seconds)`,
+> summed here as 8m51s.
+
+| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` |
 |---|---|---|---|
-| Date | 2026-08-08 | 2026-08-08 | earlier session |
-| `azd provision` | **1m20s** | **1m43s** | 1m25s |
-| `azd deploy` | **2m21s** | **3m1s** | 2m3s |
-| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | — |
-| `azd ai agent eval` | — | — | 3m15s |
-| `azd down --force --purge` | **1m46s** | **1m45s** | 2m11s |
-| Resources created | **2** | **2** | 2 |
-| RG-scope role assignments | **0** | **0** | — |
+| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** |
+| `azd provision` | **1m20s** | **1m43s** | **1m34s** |
+| `azd deploy` | **2m21s** | **3m1s** | **2m41s** |
+| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) |
+| `azd ai agent eval generate` | — | — | **8m51s** |
+| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed |
+| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** |
+| Resources created | **2** | **2** | **2** |
+| RG-scope role assignments | **0** | **0** | **0** |
+
+Container mode was measured separately — it is the outlier:
+
+| | Code mode (default) | Container mode |
+|---|---|---|
+| `azd provision` | **1m20s** | **2m39s** — roughly double |
+| `azd deploy` | 2m21s | **2m40s** |
+| First `invoke` | 14.242s | **11.399s** |
+| `azd down --force --purge` | 1m46s | **2m5s** |
+| Resources created | **2** | **3** (adds a **Premium** ACR) |
+| Role assignments | 0 | **1** — `AcrPull`, at *ACR* scope |
 
 What to take from this:
 
-- **Two resources, every time.** Language and run do not change the footprint — one
-  `Microsoft.CognitiveServices` account plus one nested project. See [cost](cost.md).
+- **Two resources, every time — unless you choose container mode.** Language and run do not
+  change the footprint; the deploy mode does. See [cost](cost.md) and
+  [deploy modes](deploy-modes.md).
 - **Under 5 minutes, cold to serving.** Both languages. Rebuilding an environment is cheap, so
   there is no reason to leave one running.
+- **Evaluation is not a 5-minute add-on.** `eval generate` alone took **8m51s** — longer than
+  provision, deploy and the eval run *combined*. Budget for it. See [Lab 06](../tutorial/06-evaluate.md).
 - **Timings vary ±20% run to run.** The Python run was *faster* to provision and deploy but
   *slower* on first invoke — with a single sample each, that is noise, not a language ranking.
   Treat these as orders of magnitude, not benchmarks.

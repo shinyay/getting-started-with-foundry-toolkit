@@ -412,7 +412,7 @@ and lets you apply or deploy the winner.
 
 `--force` skips confirmation for **breaking changes** — meaning this command can break clients,
 which is why it asks. Relevant to A2A, where the agent card is how other agents discover you
-(see [multi-agent](../concepts/multi-agent.md)).
+(see [multi-agent](../learn/10-multi-agent.md)).
 
 ### `delete`
 

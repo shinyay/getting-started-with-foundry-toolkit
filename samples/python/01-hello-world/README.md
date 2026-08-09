@@ -1,173 +1,128 @@
 # 01 · Hello World
 
-> **New idea:** a hosted agent is just an HTTP server that speaks a protocol.
+> ⏱️ **15 min** · 📋 **Requires:** [setup](../../../docs/tutorial/01-setup.md) · 💰 **token + hosted-agent compute** · ☁️ **Creates 2 Azure resources**
+
+Deploy the smallest Python Agent Framework agent and prove it responds through the Foundry host.
 
 > [!NOTE]
 > **Verified end-to-end on 2026-08-08** against live Azure (`eastus2`, `azd 1.30.0`):
 > `provision` 1m20s → 2 resources · `deploy` 2m21s → agent `active` · `invoke` responded in
 > 14.242s (first byte 7.357s) · `azd down --force --purge` 1m46s, verified back to zero.
 
-Everything else in this ladder is a variation on this file.
+## What you'll learn
 
----
+- Run a checked-in `azure.yaml` sample instead of scaffolding a new project.
+- Identify the three pieces of a Responses-hosted Python agent: client, agent, host server.
+- Set the model deployment variable that `azd provision` does not set for you.
+- Clean up the two Azure resources the sample creates.
 
-## Scaffold it
+## Steps
+
+### 1. Open this sample
 
 ```bash
-mkdir 01-hello && cd 01-hello
-azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml"
+cd samples/python/01-hello-world
 ```
 
-Or copy this folder.
-
----
-
-## The code
+### 2. Inspect the agent shape
 
 ```python
-import os
+client = FoundryChatClient(
+    project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+    model=model_name,
+    credential=DefaultAzureCredential(),
+)
 
-from agent_framework import Agent
-from agent_framework.foundry import FoundryChatClient
-from agent_framework_foundry_hosting import ResponsesHostServer
-from azure.identity import DefaultAzureCredential
-from dotenv import load_dotenv
+agent = Agent(
+    client=client,
+    instructions="You are a friendly assistant. Keep your answers brief.",
+    default_options={"store": False},
+)
 
-load_dotenv()
-
-def main():
-    model_name = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME") or os.getenv("FOUNDRY_MODEL_NAME")
-    if not model_name:                                   # ⓪ the guard behind gotcha #2
-        raise RuntimeError(
-            "Model deployment name is not configured. Set "
-            "AZURE_AI_MODEL_DEPLOYMENT_NAME or FOUNDRY_MODEL_NAME."
-        )
-
-    client = FoundryChatClient(                          # ① talk to Foundry
-        project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
-        model=model_name,
-        credential=DefaultAzureCredential(),             # ② no keys anywhere
-    )
-
-    agent = Agent(                                       # ③ the agent itself
-        client=client,
-        instructions="You are a friendly assistant. Keep your answers brief.",
-        default_options={"store": False},                # ④ host manages history
-    )
-
-    ResponsesHostServer(agent).run()                     # ⑤ serve on :8088
+ResponsesHostServer(agent).run()
 ```
 
 | | Why it matters |
 |---|---|
-| ① `FoundryChatClient` | reads `FOUNDRY_PROJECT_ENDPOINT`, which Foundry injects at runtime |
-| ② `DefaultAzureCredential` | your `az login` locally, the agent's **managed identity** in Azure — the same code works in both |
-| ③ `instructions` | the entire "prompt" of this agent |
-| ④ `store: False` | the hosting layer owns conversation history, so the model service doesn't need to |
-| ⑤ `ResponsesHostServer` | wraps the agent in an OpenAI **Responses**-compatible HTTP server |
+| `FoundryChatClient` | reads `FOUNDRY_PROJECT_ENDPOINT`, which Foundry injects at runtime |
+| `DefaultAzureCredential` | your `az login` locally, the agent's managed identity in Azure |
+| `instructions` | the entire prompt of this agent |
+| `store: False` | the hosting layer owns conversation history |
+| `ResponsesHostServer` | wraps the agent in an OpenAI Responses-compatible HTTP server |
 
-**There is no Foundry-specific request handling in your code.** You write an agent; the host
-turns it into a service.
-
----
-
-## Run it
+### 3. Provision and run locally
 
 ```bash
 azd env set AZURE_SUBSCRIPTION_ID <your-subscription-id>
 azd env set AZURE_LOCATION eastus2
-azd provision                                        # ~1m25s
-azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini   # ⚠️ required, see below
+azd provision
+azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 azd ai agent run --no-client
 ```
 
-Wait for:
+The local server listens on port 8088.
 
-```text
-Running on http://0.0.0.0:8088 (CTRL + C to quit)
-```
-
-In a second terminal:
+### 4. Invoke it from a second terminal
 
 ```bash
 azd ai agent invoke --local "In one short sentence, what is Microsoft Foundry?"
 ```
 
-```text
-[local] Microsoft Foundry is Microsoft's platform for building, customizing, and
-deploying AI apps and agents using foundation models.
-
-Server responded in 9.966s
-```
-
----
-
-## ⚠️ Two things that will trip you up
-
-**1. `AZURE_AI_MODEL_DEPLOYMENT_NAME` is not set by `provision`.** Without it:
+Expected shape — ⚠️ we captured the **remote** invoke below, not this local one, so the timing
+here is a placeholder rather than a recording:
 
 ```text
-RuntimeError: Model deployment name is not configured.
+[hello-world] Microsoft Foundry is Microsoft's AI platform for building, customizing,
+and deploying AI apps and agents.
+
+Server responded in <n>s (first byte: <n>s)
 ```
 
-```bash
-azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
-```
-
-**2. The `169.254.169.254` traceback is harmless.** `DefaultAzureCredential` probes the Azure
-Instance Metadata Service, which doesn't exist on your laptop. It falls back to `az login`.
-Ignore it.
-
----
-
-## Deploy
+### 5. Deploy, inspect, and clean up
 
 ```bash
-azd deploy                                    # ~2m3s
+azd deploy
 azd ai agent invoke "What is Microsoft Foundry?"
 azd ai agent show --output json
-```
-
-`show` reveals what Foundry actually stored:
-
-```json
-{
-  "id": "hello-world:1",
-  "definition": {
-    "code_configuration": { "entry_point": ["python","main.py"], "runtime": "python_3_13" },
-    "cpu": "0.5", "memory": "1Gi"
-  },
-  "status": "active",
-  "instance_identity": { "principal_id": "2debe4d4-…" }
-}
-```
-
-Note `:1` — redeploying the same `name:` makes `:2`, not a second agent.
-
----
-
-## Clean up
-
-```bash
 azd down --force --purge
 ```
 
----
+`show` reveals that Foundry stored a versioned agent such as `hello-world:1`; redeploying the
+same `name:` creates a new version, not a second logical agent.
 
-## What changed vs. an ordinary script
+## ✅ Checkpoint
 
-| Ordinary script | This agent |
-|---|---|
-| you call the model | the **host** calls your agent |
-| you manage history | `store: False` — host manages it |
-| keys in `.env` | managed identity, no keys |
-| runs where you run it | runs in Foundry, versioned, traced |
+From this directory, verify that the manifest points at a real source folder:
 
----
+```bash
+python3 -c "import os,yaml; d=yaml.safe_load(open('azure.yaml')); s=d['services']['hello-world']; print(s['project'], os.path.isdir(s['project']))"
+```
 
-👉 Next: [02 · Tools](../02-tools/) — give the agent something to *do*.
+```text
+src/hello-world True
+```
 
----
+If you see something else, jump to *If that didn't work* below.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `RuntimeError: Model deployment name is not configured.` | `AZURE_AI_MODEL_DEPLOYMENT_NAME` was not set after provision. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| `DefaultAzureCredential` mentions `169.254.169.254`. | Local credential probing checked the Azure metadata endpoint. | Ignore it if the command then falls back to `az login`. |
+| `project` path check prints `False`. | `azure.yaml` and `src/` are out of sync. | Restore `project: src/hello-world` or rename the folder back. |
+
+## ✏️ Exercise
+
+Before running it, predict what the checkpoint command prints if you rename `src/hello-world`
+to `src/renamed-agent` without editing `azure.yaml`.
+
+<details>
+<summary>Solution</summary>
+
+It prints `src/hello-world False`. `azd` reads the `project:` path from `azure.yaml`; it does not
+search for a replacement directory.
+</details>
 
 ## Provenance
 
@@ -182,3 +137,7 @@ This sample is **adapted from upstream**, not invented here. Exact mapping so yo
 
 Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
 Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.
+
+## → Next
+
+[02 · Tools](../02-tools/)

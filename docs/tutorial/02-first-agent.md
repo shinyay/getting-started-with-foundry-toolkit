@@ -1,0 +1,355 @@
+# 🧪 Lab 02 — Run your first agent locally
+
+> ⏱️ **30 min** · 📋 **Requires:** [Lab 01](01-setup.md) · 💰 **~$0.02** · ☁️ **Creates 2 Azure resources**
+
+Scaffold a hosted-agent sample, provision a Foundry project, and talk to the agent on your laptop.
+
+## What you'll learn
+
+- Pick a verified sample from the CLI catalog.
+- Initialize a project from a unified `azure.yaml`.
+- Set the environment values `azd provision` does not set for you.
+- Run the local agent server and invoke it through `azd`.
+
+```mermaid
+flowchart LR
+    A["① init"] --> B["② env"] --> C["③ provision"] --> D["④ run"] --> E["⑤ invoke --local"]
+    E --> F["⑥ deploy"] --> G["⑦ show"] --> H["⑧ invoke"] --> I["⑨ eval"] --> J["⑩ down"]
+    style C fill:#fff3cd
+    style F fill:#fff3cd
+    style J fill:#f8d7da
+```
+
+> Every verified command and output block in this lab came from a real Azure run on
+> 2026-08-08 with `azd 1.30.0` / `azure.ai.agents 1.0.0-beta.9`.
+
+## Steps
+
+### 1. Pick a sample
+
+The CLI ships a curated catalog — **21 Python** and **13 C#** samples today.
+
+```bash
+azd ai agent sample list --language python
+azd ai agent sample list --language dotnetCsharp
+```
+
+> [!TIP]
+> `--language` takes the *short* form (`python`, `dotnetCsharp`).
+> `--runtime` elsewhere takes the *full* token (`python_3_13`). They are not interchangeable —
+> a bare `python` will fail as a runtime.
+
+Machine-readable form, which is how you get the `manifestUrl` to feed into `init`:
+
+```bash
+azd ai agent sample list --language python --output json
+```
+
+```json
+{
+  "templates": [
+    {
+      "title": "Basic agent (Responses, Agent Framework, Python)",
+      "manifestUrl": "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml",
+      "featured": true,
+      "initCommand": "azd ai agent init -m \"…/01-basic/azure.yaml\""
+    }
+  ]
+}
+```
+
+Full catalog: [sample-catalog.md](../reference/sample-catalog.md).
+
+### 2. `init` — scaffold
+
+```bash
+mkdir my-agent && cd my-agent
+
+azd ai agent init --no-prompt \
+  -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml" \
+  --deploy-mode code \
+  --runtime python_3_13 \
+  --entry-point main.py
+```
+
+<details open>
+<summary>✅ Verified output</summary>
+
+```text
+Downloading sample from GitHub...
+  AGENTS.md
+  CLAUDE.md
+  README.md
+  azure.yaml
+  src/agent-framework-agent-basic-responses/.azdignore
+  src/agent-framework-agent-basic-responses/.dockerignore
+  src/agent-framework-agent-basic-responses/.env.example
+  src/agent-framework-agent-basic-responses/Dockerfile
+  src/agent-framework-agent-basic-responses/main.py
+  src/agent-framework-agent-basic-responses/requirements.txt
+Adopting the sample's azure.yaml as your project manifest...
+
+Initializing an app to run on Azure (azd init)
+  (✓) Done: Initialized git repository
+  (✓) Done: Copying template code from local path to: …/agent-framework-agent-basic-responses
+
+Installing required extensions...
+  (-) Skipped: Installing azure.ai.agents extension (version 1.0.0-beta.9 already installed)
+Missing Azure environment values: AZURE_SUBSCRIPTION_ID, AZURE_LOCATION. Continuing because --no-prompt was specified.
+
+Adopted the sample's azure.yaml as the project manifest at azure.yaml.
+```
+</details>
+
+**What you get:**
+
+```text
+my-agent/
+├── azure.yaml                    ← the contract; read this first
+├── AGENTS.md  CLAUDE.md  README.md
+├── .azure/                       ← azd environment state (gitignored)
+└── src/agent-framework-agent-basic-responses/
+    ├── main.py
+    ├── requirements.txt
+    ├── Dockerfile                ← only used in container mode
+    ├── .env.example
+    ├── .azdignore  .dockerignore
+    └── .venv/                    ← created later by `run`
+```
+
+> [!NOTE]
+> **`--agent-name` does not rename the scaffold.** When `-m` points at a sample's unified
+> `azure.yaml`, that file is *adopted verbatim*, so the folder and service keep the sample's
+> name. To rename, edit `name:` in `azure.yaml` before deploying — the Foundry agent identity
+> comes from there.
+
+#### Two manifest flavours
+
+`init` accepts either. Knowing which you have explains most `init` errors.
+
+| Flavour | Detected by | Behaviour |
+|---|---|---|
+| **Unified `azure.yaml`** (current) | declares a service with `host: azure.ai.agent` | adopted as your project manifest |
+| **Agent manifest** (`agent.manifest.yaml`) | AgentManifest shape, has `template:` | an `azure.yaml` is *generated* from it |
+
+A `must contain 'template' field` error means an **old extension** is trying to read a new
+unified manifest as an agent manifest. Fix the version, not the file.
+
+### 3. `env` — point at your subscription
+
+```bash
+azd env set AZURE_SUBSCRIPTION_ID <your-subscription-id>
+azd env set AZURE_LOCATION eastus2
+```
+
+Values land in `.azure/<env-name>/.env`. That file is **gitignored** and is where secrets
+belong — never in `azure.yaml`.
+
+### 4. `provision` — create Azure resources
+
+```bash
+azd provision --no-prompt
+```
+
+<details open>
+<summary>✅ Verified output — 1 min 20 s</summary>
+
+```text
+Reading subscription and location from environment...
+Subscription: MCAPS-Hybrid-REQ-…
+Location: East US 2
+
+Preparing Foundry provisioning template...
+Starting ARM deployment "azd-foundry-…"...
+Foundry deployment in progress
+…
+Foundry deployment complete
+
+SUCCESS: Your application was provisioned in Azure in 1 minute 20 seconds.
+```
+</details>
+
+Exactly two resources appear:
+
+```bash
+az resource list -g <rg> --query "[].{name:name,type:type}" -o table
+```
+
+```text
+Name
+----------------------
+cog-56mzb54ouruu6            ← Microsoft.CognitiveServices/accounts
+cog-56mzb54ouruu6/rdpy       ← …/accounts/projects
+```
+
+Provision writes ~15 variables back into your environment. The one that matters:
+
+```bash
+azd env get-values | grep FOUNDRY_PROJECT_ENDPOINT
+```
+
+```text
+FOUNDRY_PROJECT_ENDPOINT="https://cog-56mzb54ouruu6.services.ai.azure.com/api/projects/rdpy"
+```
+
+#### 🐛 Gotcha: the model name is *not* set for you
+
+`azure.yaml` declares `AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}` and
+`main.py` requires it — but `provision` only writes `AI_PROJECT_DEPLOYMENTS` (a JSON blob).
+The plain variable is left unset, so the very next step crashes:
+
+```text
+RuntimeError: Model deployment name is not configured.
+Set AZURE_AI_MODEL_DEPLOYMENT_NAME or FOUNDRY_MODEL_NAME.
+```
+
+Set it once, using the deployment name from `azure.yaml`:
+
+```bash
+azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
+```
+
+### 5. `run` — the local loop
+
+```bash
+azd ai agent run --no-client
+```
+
+<details open>
+<summary>✅ Verified output</summary>
+
+```text
+Detected python project. Start command: python main.py
+Setting up Python environment...
+Using CPython 3.14.3
+Creating virtual environment at: .venv
+Installing dependencies (requirements.txt)...
+  ✓ Dependencies installed (requirements.txt)
+Starting agent on http://localhost:8088 (Ctrl+C to stop)
+
+INFO azure.ai.agentserver: AgentServerHost starting on 0.0.0.0:8088
+INFO azure.ai.agentserver: Platform environment: is_hosted=False, port=8088
+INFO azure.ai.agentserver: Connectivity: project_endpoint=https://cog-….services.ai.azure.com
+[INFO] Running on http://0.0.0.0:8088 (CTRL + C to quit)
+```
+</details>
+
+Things worth noticing:
+
+- **azd downloads its own Python** (`CPython 3.14.3` via `uv`). Your system Python is irrelevant.
+- The venv is created **inside `src/<project>/`**, next to `requirements.txt` — not at the repo
+  root. If you make one somewhere else, azd will quietly build a second one.
+- Wait for **`Running on http://0.0.0.0:8088`**. `Starting agent…` is not ready yet.
+- `azd ai agent run` opens **two azd-owned ports**: the agent on **8088** (`--port`) and the
+  Agent Inspector UI on **8087** (`--inspector-port`). Drop `--no-client` to open Inspector.
+
+> [!WARNING]
+> Run this in a **real foreground terminal** (or a proper background job manager).
+> Backgrounding it with `&`/`nohup` in a throwaway shell gets it SIGHUP'd and it dies silently.
+
+> [!NOTE]
+> **The scary traceback you can ignore.** On a dev machine you will see a large
+> OpenTelemetry span with `ConnectTimeout … 169.254.169.254 … /metadata/instance/compute`.
+> That is `DefaultAzureCredential` probing for an Azure managed identity that does not exist
+> locally. It falls back to your `az login` credential and the agent works fine.
+
+### 6. `invoke --local` — talk to it
+
+In a second terminal:
+
+```bash
+azd ai agent invoke --local "In one short sentence, what is Microsoft Foundry?"
+```
+
+<details open>
+<summary>Expected shape — ⚠️ not captured verbatim</summary>
+
+```text
+Agent:        hello-world (local)
+Message:      "In one short sentence, what is Microsoft Foundry?"
+Session:      (new -- server will assign)
+Conversation: conv_<server-assigned>
+Session:      <server-assigned>
+Trace ID:     <32 hex chars>
+
+[hello-world] Microsoft Foundry is Microsoft's AI platform for building, customizing,
+and deploying AI apps and agents.
+
+Server responded in <n>s (first byte: <n>s)
+```
+</details>
+
+> [!NOTE]
+> ❌ **We did not capture a `--local` invoke transcript**, so unlike most blocks in this repo the
+> text above is the *shape* rather than a verbatim recording — the session IDs, trace ID and
+> timing are placeholders. The field list is taken from the real **remote** invoke we did capture
+> (below), which prints the identical header. If your local run differs structurally, trust your
+> terminal, not this page.
+
+> `curl http://localhost:8088/` returns **404** — that is correct. There is no root route;
+> the protocol lives under the Responses API paths. Use `invoke` or the Inspector.
+
+## ✅ Checkpoint
+
+You should now be able to run this in the second terminal and see this shape:
+
+```bash
+azd ai agent invoke --local "In one short sentence, what is Microsoft Foundry?"
+```
+
+```text
+Agent:        hello-world (local)
+Message:      "In one short sentence, what is Microsoft Foundry?"
+Session:      (new -- server will assign)
+Conversation: conv_<server-assigned>
+Session:      <server-assigned>
+Trace ID:     <32 hex chars>
+
+[hello-world] Microsoft Foundry is Microsoft's AI platform for building, customizing,
+and deploying AI apps and agents.
+
+Server responded in <n>s (first byte: <n>s)
+```
+
+If you see something else, jump to *If that didn't work* below.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `RuntimeError: Model deployment name is not configured.` | `azd provision` never sets `AZURE_AI_MODEL_DEPLOYMENT_NAME`. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| Large traceback mentioning `169.254.169.254` | `DefaultAzureCredential` probed Azure Instance Metadata Service on your laptop. | Ignore it if the agent continues and invoke works. |
+| `invoke --local` cannot connect | The server is not ready or is not running on port 8088. | Wait for `Running on http://0.0.0.0:8088`; check `--port` if you changed it. |
+| You looked for `azd ai agent logs` | That command does not exist. | Use `azd ai agent monitor` after deployment. |
+
+Everything else: [troubleshooting](../reference/troubleshooting.md).
+
+## ✏️ Exercise
+
+Before running anything, predict what `azd env get-values | grep AZURE_AI_MODEL_DEPLOYMENT_NAME`
+prints before and after you set the model deployment name.
+
+<details>
+<summary>Solution</summary>
+
+Before you set it, it prints nothing because `provision` does not write that plain variable.
+After this command:
+
+```bash
+azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
+```
+
+it prints:
+
+```text
+AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-5.4-mini"
+```
+</details>
+
+## → Next
+
+[Lab 03 — Deploy and clean up](03-deploy.md)
+
+---
+
+<sub>[← Setup](01-setup.md) · [🧪 Tutorial index](README.md) · [Deploy →](03-deploy.md)</sub>

@@ -133,7 +133,7 @@ The implication is uncomfortable and worth stating plainly:
 > **The golden path succeeds partly because you are over-privileged.** If it works for you as
 > a subscription Owner, that is *not* evidence it will work for a least-privilege service
 > principal in CI. The permissions were inherited, not granted. Test your pipeline identity
-> separately — see [CI/CD](../guide-cicd/README.md).
+> separately — see [CI/CD](../tutorial/10-cicd.md).
 
 To see what you are actually relying on, re-run with inheritance shown:
 

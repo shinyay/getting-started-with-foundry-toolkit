@@ -1,4 +1,9 @@
-# 🧩 Prompt agents — the declarative path
+# 🧩 Alternative route — prompt agents (the declarative path)
+
+> ⏱️ **30 min** · 📋 **Requires:** [Lab 01](01-setup.md) · 💰 **model tokens only — no container** · ☁️ **Creates 2 Azure resources**
+>
+> 🔀 **This is an alternative to labs 02–03, not an extra lab.** A prompt agent has no code and
+> no container, so the deploy path is different from every other lab in this tutorial.
 
 > Hosted agents dominate this repo, but Foundry has another agent type: **prompt agents**.
 > A prompt agent is a versioned Foundry resource defined by model, instructions and tool
@@ -24,7 +29,7 @@ flowchart LR
 
 ## 1. The precise distinction
 
-The [concepts page](../concepts/README.md#2-two-kinds-of-agent-prompt-vs-hosted) gives the
+The [concepts page](../learn/README.md#2-two-kinds-of-agent-prompt-vs-hosted) gives the
 short version. The deeper distinction is about **where behavior lives**.
 
 | Question | Prompt agent | Hosted agent |
@@ -37,7 +42,7 @@ short version. The deeper distinction is about **where behavior lives**.
 | Main authoring UI | VS Code / portal **Agent Builder** | `azd ai agent init`, VS Code Hosted Agent wizard |
 | Main programmatic surface | Foundry SDK, REST, Foundry MCP tools | `azd provision`, `azd deploy`, `azd ai agent invoke` |
 | Versioning | Creating/updating creates agent versions | Each `azd deploy` creates a version for the same agent name |
-| Best first step | Build in Agent Builder, then copy SDK snippet | Start with [CLI guide](../guide-cli/README.md) |
+| Best first step | Build in Agent Builder, then copy SDK snippet | Start with [CLI guide](02-first-agent.md) |
 
 > [!NOTE]
 > The captured VS Code Foundry Toolkit docs describe prompt agents as lightweight agents
@@ -113,7 +118,7 @@ all template types are azure.yaml
 | Captured VS Code Agent Builder docs | Prompt agents are created from **My Resources → project → Prompt Agents → +**, then configured with name, model, instructions and optional tools. |
 | Captured VS Code Agent Builder docs | Agent Builder supports variables, MCP servers, function-calling tools from JSON schema/example, mock responses, Evaluation tab, View Code and View Snippet. |
 | Microsoft Foundry Skill from `microsoft/azure-skills` | Says prompt agents are created/updated through Foundry MCP tools (`agent_definition_schema_get`, `agent_update`, `agent_get`, `agent_delete`) with SDK fallback. This is **skill guidance, not live output from this repo**. |
-| This repo's `docs/concepts/README.md` | Explains prompt agents as instructions + model config + catalog tools, usually built in Agent Builder or portal. |
+| This repo's [`docs/learn/README.md`](../learn/README.md) | Explains prompt agents as instructions + model config + catalog tools, usually built in Agent Builder or portal. |
 | This repo's `docs/reference/azure-yaml.md` | Shows `kind: hosted` in the verified manifest and notes `kind: hosted | prompt`, but does not give a verified prompt-agent `azure.yaml` schema. |
 
 > [!WARNING]
@@ -424,7 +429,7 @@ flowchart TB
 ```
 
 1. **Freeze the prompt version.** Record agent name, version, model, instructions and tools.
-2. **Create a hosted baseline.** Use [CLI guide](../guide-cli/README.md) or a sample that matches
+2. **Create a hosted baseline.** Use [CLI guide](02-first-agent.md) or a sample that matches
    your preferred framework/protocol.
 3. **Carry over instructions.** Put the prompt in a reviewed config file or constant used by
    your model call.
@@ -476,9 +481,51 @@ That is why this page gives only the documented minimal fields and safe workflow
 
 ---
 
-## Next
+## ✅ Checkpoint
 
-- 👉 [Concepts](../concepts/README.md) — prompt vs hosted mental model.
-- 👉 [GUI guide](../guide-gui/README.md) — Agent Builder and VS Code path.
-- 👉 [CLI guide](../guide-cli/README.md) — hosted-agent golden path.
+```bash
+azd ai agent list
+```
+
+You should see your prompt agent listed. Then confirm the defining difference from every other
+lab — there is no container image:
+
+```bash
+azd env get-values | grep -i CONTAINER_REGISTRY || echo "no ACR — correct for a prompt agent"
+```
+
+A prompt agent that works produces a response with **no `src/` directory, no Dockerfile, and no
+container build in the deploy log.** If you see an image build, you built a hosted agent.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The `prompt agent` subcommand is missing | Your extension predates it. | Check `azd extension list`; see the version floor in [reference](../reference/README.md). |
+| Deploy builds a container | You scaffolded a hosted agent by mistake. | A prompt agent has no `host: azure.ai.agent` code service. |
+| The agent answers but ignores your instructions | Instructions were not applied to the deployed version. | Re-deploy, then confirm with `azd ai agent show`. |
+| Empty response, exit code 0 | Same trap as hosted agents. | Assert on content — [troubleshooting §16](../reference/troubleshooting.md). |
+
+## ✏️ Exercise
+
+You need an agent that calls your company's internal Python library. Prompt agent or hosted
+agent — and why?
+
+<details>
+<summary>Solution</summary>
+
+**Hosted agent.** A prompt agent is model + instructions + *declared* tool configuration; it has
+no place to run your code. The moment you need to execute code you control, you need a container,
+which means a hosted agent — and therefore an ACR, and therefore
+[container mode](07-container-mode.md) and its costs.
+
+The reverse test is just as useful: if your agent is *only* instructions and hosted tools, a
+prompt agent removes the entire build-and-push half of the lifecycle.
+</details>
+
+## → Next
+
+- 👉 [Lab 04 — Add tools](04-add-tools.md) — continue on the hosted route.
+- 👉 [Agent types](../learn/02-agent-types.md) — prompt vs hosted mental model.
+- 👉 [Alternative route — VS Code GUI](alt-vscode.md) — Agent Builder path.
 - 👉 [Troubleshooting](../reference/troubleshooting.md) — known failures and fixes.

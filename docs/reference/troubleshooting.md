@@ -199,6 +199,77 @@ azd ai agent eval generate --no-prompt \
   --gen-instruction "Generate 5 short factual questions a new developer would ask."
 ```
 
+> ⏱️ It is not hung. ✅ Measured **8m51s** to generate 15 cases plus a rubric. Use `--no-wait`
+> if you need the terminal back.
+
+---
+
+## 7b. `failed to read eval config ".../src/<agent>/eval.yaml"`
+
+```text
+ERROR: failed to read eval config "/…/src/hello-world/eval.yaml":
+  open /…/src/hello-world/eval.yaml: no such file or directory
+```
+
+✅ **Verified 2026-08-09.** `azd ai agent eval` resolves every path against the service's
+`project:` directory in `azure.yaml` — **not** your cwd and **not** the repo root. `eval.yaml`,
+`datasets/`, `evaluators/` and `.agent_configs/` all belong under `src/<agent>/`.
+
+> [!CAUTION]
+> **`--config` does not fix this.** A *relative* `--config` is resolved against the same
+> project directory, so `--config eval.yaml` fails identically. An absolute path gets past
+> config-reading, but `local_uri` still resolves against the project directory — it only moves
+> the failure one step later.
+
+The CLI prints its own resolution before failing. Read these lines rather than guessing:
+
+```text
+(✓) Project:        /…/src/hello-world (azure.yaml service "hello-world" project path)
+    Eval config:    /…/src/hello-world/eval.yaml
+```
+
+---
+
+## 7c. `The evaluator <name> was not found` (404)
+
+```text
+RESPONSE 404: UserError
+"message": "The evaluator smoke-core was not found"
+"messageFormat": "The evaluator {id} was not found"
+```
+
+✅ **Verified 2026-08-09.** You are using an `eval.yaml` that was generated for a *different*
+project. **`eval.yaml` is not portable.**
+
+`local_uri` is a **download cache, not an upload source** — `eval run` never registers local
+files. The dataset and evaluator must exist as registered assets *in the project you are
+evaluating against*, and `eval generate` is what creates them.
+
+**Fix:** run `azd ai agent eval generate` in the target project. Copying the YAML is not
+enough.
+
+---
+
+## 7d. `AzureDeveloperCLICredential: signal: killed`
+
+```text
+ERROR: failed to get auth token: AzureDeveloperCLICredential: signal: killed.
+```
+
+✅ **Observed repeatedly 2026-08-09** across `invoke`, `eval generate`, `eval run` and
+`eval show`. It is a **transient token-acquisition failure**, not a configuration problem — the
+subprocess that fetches the token is killed before it returns.
+
+**Fix:** re-run the command. It cleared on retry every time. If it repeats, prime the cache
+first:
+
+```bash
+azd auth token -o json > /dev/null && azd ai agent eval run --no-prompt
+```
+
+Do not start editing `azure.yaml` or re-provisioning over this error — nothing is wrong with
+your project.
+
 ---
 
 ## 8. `--agent-name` seems to be ignored
@@ -340,7 +411,140 @@ If the Inspector shows nothing, you are almost certainly pointed at the other po
 
 ---
 
-## 16. Collecting diagnostics
+## 16. 🔴 Empty response, and `invoke` exits **0**
+
+```text
+Session:      24b123a0…  (assigned by server)
+Trace ID:     30f2707e12f8bc3d4555543be7c540f3
+Server responded in 9.010s (first byte: 8.294s)
+```
+
+Notice what is **missing**: there is no `[agent-name] …` line. ✅ Verified 2026-08-09.
+
+> [!CAUTION]
+> **This is the most dangerous failure mode in the toolkit.** A hosted agent that throws during
+> tool initialisation still returns **HTTP 200 with an empty body**, so
+> `azd ai agent invoke` prints timings and **exits 0**. A CI job checking `$?` records a pass.
+
+**An empty agent line is a failure.** Always confirm with:
+
+```bash
+azd ai agent monitor <agent-name>
+```
+
+In our run the underlying error was only visible there:
+
+```text
+agent_framework.exceptions.ToolExecutionException: ('Failed to enter context manager.', McpError(
+  'tools/list failed for 1 tool source(s), succeeded for 0 tool source(s)'))
+```
+
+> [!TIP]
+> In CI, assert on **output content**, not the exit code:
+> ```bash
+> OUT=$(azd ai agent invoke my-agent "ping")
+> echo "$OUT" | grep -q "^\[my-agent\]" || { echo "agent produced no output"; exit 1; }
+> ```
+
+---
+
+## 17. 🔴 `${VAR}` in `azure.yaml` silently becomes an empty string
+
+```text
+POST …/toolboxes//mcp?api-version=v1   →   HTTP 405 Method Not Allowed
+                   ↑↑ empty name
+```
+
+✅ Verified 2026-08-09. `azure.yaml` declared:
+
+```yaml
+environmentVariables:
+  - name: TOOLBOX_NAME
+    value: ${TOOLBOX_NAME}
+```
+
+`TOOLBOX_NAME` was never set in the azd environment. **azd substituted an empty string and
+warned about nothing.** `provision` and `deploy` both succeeded.
+
+### Fix
+
+```bash
+azd env get-values          # confirm every ${VAR} in azure.yaml has a value
+azd env set TOOLBOX_NAME a2a-delegation-tools
+azd deploy
+```
+
+> [!TIP]
+> Check the sample's `.env.example` — for third-party samples it is often the only place the
+> expected value is written down.
+
+Audit your own manifest before deploying:
+
+```bash
+grep -o '\${[A-Za-z_][A-Za-z0-9_]*}' azure.yaml | tr -d '${}' | sort -u | \
+  while read v; do azd env get-value "$v" >/dev/null 2>&1 || echo "UNSET: $v"; done
+```
+
+---
+
+## 18. `unknown command "logs"`
+
+```text
+ERROR: unknown command "logs" for "agent"
+```
+
+The command is **`monitor`**:
+
+```bash
+azd ai agent monitor <agent-name>
+```
+
+---
+
+## 19. `setup-a2a.sh` — `FOUNDRY_PROJECT_ENDPOINT is not set`
+
+```text
+Error: FOUNDRY_PROJECT_ENDPOINT is not set (expected in .../scripts/../.env).
+```
+
+✅ Verified 2026-08-09. The upstream script reads `../.env`, but `azd` writes environment values
+to `.azure/<env-name>/.env`. The file the script wants does not exist.
+
+### Fix
+
+```bash
+FOUNDRY_PROJECT_ENDPOINT=$(azd env get-value FOUNDRY_PROJECT_ENDPOINT) ./setup-a2a.sh
+```
+
+> [!WARNING]
+> Do **not** use `azd env get-value AZURE_AI_PROJECT_ENDPOINT` — that key does not exist. The
+> correct name is `FOUNDRY_PROJECT_ENDPOINT`, and `get-value` on a missing key prints an error
+> *to stdout*, which then gets embedded into your URL and produces
+> `curl: (3) URL rejected: Malformed input to a URL function`.
+
+---
+
+## 20. `CONNECTION_FAILED … is missing 'Audience'/'TokenAudience'`
+
+```text
+{"code":"CONNECTION_FAILED","message":"Connection response for UserIdentity connection
+ '…/connections/math-expert-a2a' is missing 'Audience'/'TokenAudience'.
+  Token exchange cannot proceed without an audience."}
+```
+
+✅ Verified 2026-08-09. `azd provision` **drops the `audience` field** when creating a
+`RemoteA2A` connection, even though `azure.yaml` declares it. The created connection's metadata
+contains only `AgentCardPath`.
+
+> [!WARNING]
+> **No working fix known.** Setting `Audience`/`TokenAudience` in `metadata` at account scope,
+> at project scope, and as a top-level `audience` property all persisted successfully and none
+> changed the runtime error, including after a redeploy. Full detail:
+> [Lab 09](../tutorial/09-multi-agent-a2a.md#-where-this-stops--and-why-we-are-telling-you).
+
+---
+
+## 21. Collecting diagnostics
 
 ```bash
 azd version

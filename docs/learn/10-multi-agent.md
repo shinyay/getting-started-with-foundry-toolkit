@@ -7,8 +7,14 @@
 
 ## What was verified for this page
 
-I kept this investigation read-only. I did **not** run `azd provision`, `azd deploy`, invoke a
-live A2A endpoint, or create Azure resources.
+⬆️ **Upgraded 2026-08-09.** A2A was originally documented from source inspection only. It has
+since been **deployed and exercised on live Azure** — two agents, two projects, a real agent
+card fetched over the wire. See [Lab 09](../tutorial/09-multi-agent-a2a.md) for the full run.
+
+> [!IMPORTANT]
+> **The live run did not reach a working delegation.** Everything up to `tools/list` is
+> verified; the final agent-to-agent call fails on a defect in `azd provision`. That is
+> recorded honestly in Lab 09 rather than smoothed over here.
 
 <details open>
 <summary><b>✅ Verified sample catalog commands</b></summary>
@@ -27,6 +33,15 @@ paths for workflow / multi-agent / A2A found:
 | C# | **Translation Workflow agent (Responses, Agent Framework, C#)** | `csharp/hosted-agents/agent-framework/workflows` |
 
 No sample title or path in the captured catalog contained `A2A` or `agent-to-agent`.
+
+> [!WARNING]
+> **The catalog is not the whole repository.** ✅ Verified 2026-08-09: `foundry-samples`
+> contains A2A delegation samples in **both** languages —
+> `python/hosted-agents/agent-framework/a2a/01-delegation` and
+> `csharp/hosted-agents/agent-framework/a2a/01-delegation`, plus a LangGraph variant at
+> `python/hosted-agents/langgraph/a2a`. We deployed the **Python** one. Treat
+> `azd ai agent sample list` as a curated subset, not an index — browse the upstream tree
+> when something you expect is missing.
 </details>
 
 <details>
@@ -56,10 +71,11 @@ prompts for breaking changes."
 </details>
 
 > [!IMPORTANT]
-> Blocks in this page are labelled carefully. Catalog discovery and upstream source inspection
-> are verified. A2A behavior is described from command help and upstream source only; I did
-> **not** make a live agent-to-agent call or fetch a live agent card. Architecture diagrams are
-> **illustrative** unless explicitly tied to inspected sample code.
+> Blocks in this page are labelled carefully. Catalog discovery, upstream source inspection,
+> the **live agent card**, the **live `RemoteA2A` connection** and the **live failure modes**
+> are verified. A **successful** agent-to-agent call is **not** — see
+> [Lab 09](../tutorial/09-multi-agent-a2a.md). Workflow samples were not deployed. Architecture
+> diagrams are **illustrative** unless explicitly tied to inspected sample code.
 
 ---
 
@@ -280,13 +296,55 @@ sequenceDiagram
     O-->>O: Incorporate result into final answer
 ```
 
-| A2A concept | Meaning in Foundry |
-|---|---|
-| **A2A base path** | `.../agents/<agent>/endpoint/protocols/a2a` |
-| **Agent card URL** | Discovery URL under the A2A endpoint. The inspected C# sample uses `agentCard/v0.3`; do not assume that path for all future A2A versions. |
-| **Calling identity** | The identity/token forwarded to the target. The inspected caller uses a `RemoteA2A` connection with `authType: UserEntraToken`, so the toolbox forwards the **calling user's** Microsoft Entra token. |
-| **Target role** | The inspected sample README requires **Foundry User** (or higher) on the project. I did not verify a narrower live role. |
-| **Protocol dependency** | The inspected Foundry-hosted A2A sample starts with `responses` agents and PATCHes the executor endpoint to expose both `responses` and `a2a`. |
+| A2A concept | Meaning in Foundry | Status |
+|---|---|---|
+| **A2A base path** | `.../agents/<agent>/endpoint/protocols/a2a` | ✅ verified live |
+| **Agent card URL** | `<a2a-base>/agentCard/v0.3`. Do not assume this path for future A2A versions. | ✅ verified live |
+| **Calling identity** | A `RemoteA2A` connection with `authType: UserEntraToken` — the toolbox forwards the **calling user's** Entra token, not a managed identity. | ✅ connection verified live |
+| **Target role** | The sample README requires **Foundry User** (or higher) on the project. A narrower role was not tested. | ⚠️ from README |
+| **Protocol dependency** | Both agents start as `responses` agents; a PATCH adds `a2a` to the executor's protocols. | ✅ verified live |
+| **Cross-project** | The connection points at a **different Foundry project** in a different resource group. | ✅ verified live |
+
+### ✅ What a real agent card contains
+
+Fetched from a live endpoint on 2026-08-09 — this is the entire contract the caller gets:
+
+```json
+{
+  "name": "agent-framework-a2a-executor-responses",
+  "description": "A math expert that performs arithmetic operations and explains the steps.",
+  "url": "https://…/endpoint/protocols/a2a",
+  "version": "1.0",
+  "protocolVersion": "0.3",
+  "capabilities": { "streaming": false, "pushNotifications": false,
+                    "stateTransitionHistory": false, "extensions": [] },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [{ "id": "arithmetic", "name": "Arithmetic and math expert",
+               "description": "Performs arithmetic operations …", "tags": [], "examples": [] }],
+  "supportsAuthenticatedExtendedCard": false,
+  "additionalInterfaces": [{ "transport": "HTTP+JSON", "url": "https://…/endpoint/protocols/a2a" }],
+  "preferredTransport": "JSONRPC"
+}
+```
+
+Three things to read off it:
+
+- **`streaming: false`.** A delegated call does not stream. If your orchestrator streams to a
+  user, the delegated portion arrives as one block.
+- **`preferredTransport: JSONRPC`, but `additionalInterfaces` offers `HTTP+JSON`.** Callers
+  negotiate; do not hardcode one.
+- **`skills[]` is the whole advertised capability surface.** Descriptions here are what the
+  orchestrator's model reasons over when deciding to delegate — vague skill text produces
+  vague routing.
+
+> [!WARNING]
+> **Live run status: delegation did not succeed.** We verified deploy, A2A enablement, the
+> agent card, and the cross-project `RemoteA2A` connection — then hit a defect where
+> `azd provision` **drops the manifest's `audience`**, so the token exchange has no audience
+> and `tools/list` fails. Full reproduction, three defects and four attempted workarounds:
+> [Lab 09](../tutorial/09-multi-agent-a2a.md). **Budget real time for A2A** — it is the least
+> settled area of the preview.
 
 > [!IMPORTANT]
 > A2A is a trust boundary, not just a function call. Treat the remote agent like an external
@@ -530,10 +588,10 @@ A good eval suite for the verified C# translation workflow would include:
 
 ---
 
-## Next
+## → Next
 
-- 👉 [Glossary](../reference/glossary.md) — definitions for every term used above
-- 👉 [Concepts](README.md) — prompt vs hosted, protocol choice and deploy modes
-- 👉 [Sample catalog](../reference/sample-catalog.md) — all verified upstream samples
-- 👉 [CLI guide](../guide-cli/README.md) — run, deploy, invoke and eval the golden path
-- 👉 [Troubleshooting](../reference/troubleshooting.md) — real failures, including ports and versioning
+[Start the hands-on setup](../tutorial/01-setup.md)
+
+---
+
+<sub>[← Living with preview](09-living-with-preview.md) · [📘 Learn index](README.md) · [📘 Learn index →](README.md)</sub>

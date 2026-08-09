@@ -130,9 +130,19 @@ Checklist:
 | `azd down --force --purge` when done for the day | GlobalStandard is cheap idle, compute is not |
 | Stay on `-mini` models while learning | Largest single lever |
 | Don't add App Insights until you need it | Ingestion + retention are separate meters |
-| Prefer code mode over container mode | Avoids ACR entirely ([deploy modes](./deploy-modes.md)) |
+| **Prefer code mode over container mode** | Container mode creates a **Premium** ACR, billed daily whether or not you push ([deploy modes](./deploy-modes.md#container-mode-resources)) |
 | Set a budget alert on the subscription | The only control that works while you sleep |
 | One `azd` environment per experiment | Makes `down` genuinely complete |
+
+> [!CAUTION]
+> **The container-mode registry is Premium, not Basic.** ✅ Verified live 2026-08-09:
+> `azd ai agent init --deploy-mode container` → `provision` produced
+> `Microsoft.ContainerRegistry/registries` at **Premium** SKU. Premium is the most expensive
+> ACR tier and it bills per day for existence, independent of storage or pushes. Choosing
+> container mode "just to try it" leaves the priciest registry tier running if you forget to
+> `azd down`. Check the current rate on the
+> [ACR pricing page](https://azure.microsoft.com/pricing/details/container-registry/) — the
+> tier is the durable fact here, the price is not.
 
 ```bash
 az consumption budget create --budget-name foundry-learning \

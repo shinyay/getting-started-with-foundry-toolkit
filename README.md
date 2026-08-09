@@ -6,14 +6,15 @@
 [![azd](https://img.shields.io/badge/azd-%E2%89%A5%201.27.1-0078D4)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
 [![Python](https://img.shields.io/badge/Python-3.13%20%7C%203.14-3776AB?logo=python&logoColor=white)](samples/python/)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](samples/csharp/)
-[![Verified](https://img.shields.io/badge/verified-against%20live%20Azure-success)](docs/guide-cli/README.md)
+[![Verified](https://img.shields.io/badge/verified-against%20live%20Azure-success)](docs/tutorial/02-first-agent.md)
 
 A hands-on guide to the **Microsoft Foundry Toolkit** covering **both** the `azd ai agent` CLI
-and the VS Code extension, with a 4-step sample ladder in **Python and C#**. Every command and
+and the VS Code extension, with a 4-step **Python** sample ladder and **C#** code rungs through step 03. Every command and
 every output block was captured from a **real run against real Azure** — not copied from docs.
 
 > [!NOTE]
-> Verified **2026-08-08** against `azd 1.30.0` + `azure.ai.agents 1.0.0-beta.9`.
+> Verified **2026-08-09** against `azd 1.30.0` · `azure.ai.agents 1.0.0-beta.9` ·
+> `azure.ai.toolboxes 1.0.0-beta.5` · `azure.ai.inspector 1.0.0-beta.3` · `azure.ai.projects 1.0.0-beta.5`.
 > Hosted agents and `azd ai agent` are in **preview**; details shift between versions.
 
 ---
@@ -22,7 +23,7 @@ every output block was captured from a **real run against real Azure** — not c
 
 ```bash
 # 0. Prerequisites — the version floor is not optional
-#    Don't have azd yet? See docs/setup/ for Linux/Windows/macOS install.
+#    Don't have azd yet? See docs/tutorial/01-setup.md for Linux/Windows/macOS install.
 #    macOS w/ Homebrew:
 brew update && brew upgrade azd     # need >= 1.27.1
 #    Linux / WSL:  curl -fsSL https://aka.ms/install-azd.sh | bash
@@ -72,45 +73,42 @@ This repo documents **A and B equally**, from verified runs, and maps the ecosys
 
 ---
 
-## 🧭 I want to…
+## 🧭 Three ways to use this repo
 
-**Learn**
+This guide is built around one idea: **読む → 手を動かす → 後で引く**
+(*understand it → do it → look it up later*). Each mode is a separate directory, so you always
+know which one you are in.
 
-| Goal | Go here |
+| | Mode | What it is | Start here |
+|---|---|---|---|
+| 📘 | **[Learn](docs/learn/README.md)** | 10 pages of mental model. **No commands to type.** | [What is the toolkit?](docs/learn/01-what-is-the-toolkit.md) |
+| 🧪 | **[Tutorial](docs/tutorial/README.md)** ⭐ | 10 checkpointed labs. Every output verified live. | [Lab 01 — Setup](docs/tutorial/01-setup.md) |
+| 📖 | **[Reference](docs/reference/README.md)** | 12 pages to look things up mid-task. | [Troubleshooting](docs/reference/troubleshooting.md) |
+
+### Pick a route through the labs
+
+| Route | Time | Cost | You end up with |
+|---|---|---|---|
+| ⚡ **Quick win** — labs 01→03 | ~1 h | ~$0.05 | an agent live on Azure, then destroyed |
+| 🌗 **Practitioner** — + labs 04–06 | ~3 h | ~$0.30 | tools, MCP, and a **measured** quality score |
+| 🏭 **Production** — + labs 07–10 | ~6 h | ~$1 | containers, tracing, A2A, CI/CD |
+
+→ Full route details and the lab index: **[docs/tutorial/README.md](docs/tutorial/README.md)**
+
+### Or jump straight to a question
+
+| I want to… | Go here |
 |---|---|
-| …understand the mental model first | [📘 Concepts](docs/concepts/README.md) |
-| …get my machine ready | [🛠️ Setup](docs/setup/README.md) |
 | …not know what a word means | [📚 Glossary](docs/reference/glossary.md) ⭐ |
-
-**Build**
-
-| Goal | Go here |
-|---|---|
-| …build an agent from the terminal | [⌨️ CLI guide](docs/guide-cli/README.md) ⭐ |
-| …build an agent in VS Code | [🖱️ GUI guide](docs/guide-gui/README.md) |
-| …build an agent with no code | [💬 Prompt agents](docs/guide-prompt-agents/README.md) |
+| …fix an error I'm staring at | [🔧 Troubleshooting](docs/reference/troubleshooting.md) ⭐ |
+| …build in VS Code instead of the terminal | [🖱️ VS Code route](docs/tutorial/alt-vscode.md) |
+| …build an agent with no code | [💬 Prompt agents](docs/tutorial/alt-prompt-agents.md) |
 | …learn by running code | [🧪 Samples ladder](samples/README.md) |
-| …have agents call each other | [🕸️ Multi-agent & A2A](docs/concepts/multi-agent.md) |
-
-**Look up**
-
-| Goal | Go here |
-|---|---|
 | …look up a manifest field | [🧾 `azure.yaml` reference](docs/reference/azure-yaml.md) |
 | …look up a CLI flag | [⚙️ CLI reference](docs/reference/azd-cli.md) |
-| …fix an error | [🔧 Troubleshooting](docs/reference/troubleshooting.md) ⭐ |
-| …know which docs to believe | [🗺️ Ecosystem map](docs/reference/ecosystem.md) |
-
-**Ship it for real**
-
-| Goal | Go here |
-|---|---|
-| …deploy from GitHub Actions | [🔄 CI/CD guide](docs/guide-cicd/README.md) |
 | …fix a 403 that only happens in the cloud | [🔐 Identity & RBAC](docs/reference/identity-and-rbac.md) ⭐ |
 | …know what it costs | [💰 Cost](docs/reference/cost.md) |
-| …read logs and traces | [📊 Observability](docs/reference/observability.md) |
-| …choose code vs container deploy | [🚢 Deploy modes](docs/reference/deploy-modes.md) |
-| …customise the infrastructure | [🏗️ Infrastructure](docs/reference/infrastructure.md) |
+| …know which official docs to believe | [🗺️ Ecosystem map](docs/reference/ecosystem.md) |
 
 ---
 
@@ -118,17 +116,13 @@ This repo documents **A and B equally**, from verified runs, and maps the ecosys
 
 ```text
 docs/
-├── concepts/           the 6 ideas everything else assumes · multi-agent & A2A
-├── setup/              install → auth → `doctor` all green
-├── guide-cli/          the golden path, every output verified ⭐
-├── guide-gui/          the same journey in VS Code
-├── guide-prompt-agents/ agents with no code at all
-├── guide-cicd/         deploying from GitHub Actions with OIDC
-└── reference/          12 pages · manifest schema · 40 CLI commands · identity
-                        cost · observability · deploy modes · infra · glossary
+├── learn/              📘 read — the mental model, no commands to type
+├── tutorial/           🧪 do — checkpointed labs, every output verified ⭐
+└── reference/          📖 look up — 12 pages · manifest schema · 40 CLI commands
+                        identity · cost · observability · deploy modes · glossary
 samples/
 ├── python/       01-hello-world → 02-tools → 03-mcp-toolbox → 04-eval
-└── csharp/       the same ladder in .NET 10
+└── csharp/       01 → 03 (step 04 is CLI-level and language-agnostic)
 ```
 
 ### The sample ladder
@@ -165,11 +159,18 @@ flowchart LR
 <summary><b>What actually gets created in Azure</b> (reassuringly little)</summary>
 
 ```text
-cog-czn5ugi4jtvzs                    Microsoft.CognitiveServices/accounts
-cog-czn5ugi4jtvzs/<project>          …/accounts/projects
+Name                                                Sku
+--------------------------------------------------  -------
+cog-6kkz3uyx7e75m                                   S0
+cog-6kkz3uyx7e75m/<project>
 ```
 
-That's it — no ACR, no Key Vault, no storage account, unless you opt into container mode.
+That's it — no ACR, no Key Vault, no storage account, unless you opt into container mode, which
+adds a **third** line at the **Premium** SKU:
+
+```text
+cr6kkz3uyx7e75m                                     Premium
+```
 Each deployed agent gets **its own managed identity**, and agents are versioned by name
 (`my-agent:1`, `my-agent:2`, …).
 </details>
@@ -217,7 +218,7 @@ azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 your laptop. It falls back to `az login`. Ignore it.
 </details>
 
-→ [13 more, all real](docs/reference/troubleshooting.md)
+→ [21 sections of real, captured failures](docs/reference/troubleshooting.md)
 
 > [!TIP]
 > **`azd ai agent doctor` is the best tool in the toolkit.** 13 checks across local config,
@@ -228,14 +229,30 @@ your laptop. It falls back to `az login`. Ignore it.
 
 ## 📖 Verified timings & cost
 
-| Step | Time |
-|---|---|
-| `azd provision` | 1 min 25 s |
-| `azd deploy` | 2 min 3 s |
-| `azd ai agent eval run` | 3 min 15 s (15 cases → 13 passed) |
-| `azd down --force --purge` | 2 min 11 s |
+Measured on real runs, `eastus2`, `gpt-5.4-mini`. Your numbers will differ — the point is the
+*order of magnitude*, and which commands are unexpectedly expensive.
 
-Cost is token-based plus hosted-agent compute (`0.5 vCPU / 1Gi` in these samples).
+| Step | Time | Note |
+|---|---|---|
+| `azd provision` | **1 m 34 s** | creates 2 resources |
+| `azd deploy` (code mode) | **2 m 41 s** | |
+| `azd provision` (container mode) | **2 m 39 s** | + a **Premium** ACR appears |
+| `azd deploy` (container mode) | **2 m 40 s** | builds and pushes the image |
+| `azd ai agent invoke` | **14.4 s** | cold; ~7 s warm |
+| `azd ai agent eval generate` | **≥ 8 m 51 s** | ⚠️ the slowest command in the toolkit |
+| `azd ai agent eval run` | **3 m 51 s** | 15 cases → **9 passed, 6 failed** |
+| `azd down --force --purge` | **2 m 53 s** | |
+
+Times marked from `azd`'s own `SUCCESS: … in N minutes M seconds` line, except `eval generate`
+(azd prints no total — this is the last observed progress tick) and `eval run` (wall clock).
+
+> [!NOTE]
+> **`eval run` reporting 6 failures is the correct result, not a broken sample.** The generated
+> rubric grades identity fidelity; the sample's instructions are just *"You are a friendly
+> assistant"*. The gap between the two **is** the lesson — see [Lab 06](docs/tutorial/06-evaluate.md).
+
+Cost is token-based plus hosted-agent compute (`0.5 vCPU / 1Gi` in these samples). Full
+breakdown, including the standing daily cost container mode adds: [💰 Cost](docs/reference/cost.md).
 
 > [!CAUTION]
 > Always finish with **`azd down --force --purge`**. Without `--purge`, the Cognitive Services

@@ -1,4 +1,6 @@
-# 🚀 CI/CD guide — deploy Foundry agents safely
+# 🧪 Lab 10 — CI/CD: deploy Foundry agents safely
+
+> ⏱️ **45 min** · 📋 **Requires:** [Lab 03](03-deploy.md) · 💰 **one deploy per pipeline run** · ☁️ **Creates 2 Azure resources per environment**
 
 > Goal: make `azd provision` → `azd deploy` repeatable in GitHub Actions without hidden
 > prompts, version skew, or the model-name trap that breaks first CI runs.
@@ -570,9 +572,73 @@ latency and eval runs; do not tune it down to the happy-path timings.
 
 ---
 
-## Next
+## ✅ Checkpoint
 
-- 👉 [CLI guide](../guide-cli/README.md) — verified local lifecycle.
+You do not need a pipeline run to verify the two things that break first CI runs. Locally:
+
+```bash
+azd env get-value AZURE_AI_MODEL_DEPLOYMENT_NAME && echo "model name set"
+azd ai agent doctor
+```
+
+Then confirm your workflow never depends on an interactive prompt:
+
+```bash
+grep -c "no-prompt" .github/workflows/*.yml
+```
+
+Every `azd provision`, `azd deploy` and `azd ai agent eval run` step should carry
+`--no-prompt`. A count lower than your number of azd steps means a run will hang waiting for
+input that never comes.
+
+> [!CAUTION]
+> **Do not gate CI on `azd ai agent invoke`'s exit code.** ✅ Verified 2026-08-09: a broken
+> agent returns HTTP 200 with an empty body and `invoke` **exits 0**. Assert on content:
+> ```bash
+> OUT=$(azd ai agent invoke my-agent "ping")
+> echo "$OUT" | grep -q "^\[my-agent\]" || { echo "agent produced no output"; exit 1; }
+> ```
+> See [troubleshooting §16](../reference/troubleshooting.md).
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The job hangs with no output | An `azd` step is waiting on a prompt. | Add `--no-prompt` to every azd command. |
+| `Model deployment name is not configured` | `AZURE_AI_MODEL_DEPLOYMENT_NAME` is not in the CI environment. | Set it as a repo variable and `azd env set` it before `deploy`. |
+| Deploy succeeds but the agent is broken | `invoke` exits 0 on an empty response. | Assert on output content, as above. |
+| Eval step fails with `failed to read eval config` | `eval.yaml` must sit in the service `project:` dir. | See [Lab 06](06-evaluate.md). |
+| Version skew between local and CI | CI installed a newer extension. | Pin with `requiredVersions` in `azure.yaml`. |
+
+## ✏️ Exercise
+
+Your pipeline runs `azd provision` then `azd deploy` on every push to `main`, and both use
+`--no-prompt`. A teammate adds `TOOLBOX_NAME: ${TOOLBOX_NAME}` to `azure.yaml` but only sets
+the variable on their laptop. What does CI do?
+
+<details>
+<summary>Solution</summary>
+
+**CI passes, green, and ships a broken agent.** ✅ Verified behaviour: azd substitutes an unset
+`${VAR}` with an **empty string** without warning, so `provision` and `deploy` both succeed.
+The failure only appears at runtime — and even then `invoke` exits 0.
+
+Add the manifest audit from
+[troubleshooting §17](../reference/troubleshooting.md) as a pipeline step:
+
+```bash
+grep -o '\${[A-Za-z_][A-Za-z0-9_]*}' azure.yaml | tr -d '${}' | sort -u | \
+  while read v; do azd env get-value "$v" >/dev/null 2>&1 || { echo "UNSET: $v"; exit 1; }; done
+```
+</details>
+
+## → Next
+
+- 👉 [Reference](../reference/README.md) — look up commands, costs and failures.
 - 👉 [Troubleshooting](../reference/troubleshooting.md) — real failure texts and fixes.
 - 👉 [Environment variables](../reference/environment-variables.md) — what `azd provision` and `azd deploy` write.
 - 👉 [azure.yaml reference](../reference/azure-yaml.md) — schema and version guard details.
+
+---
+
+<sub>[← Multi-agent A2A](09-multi-agent-a2a.md) · [🧪 Tutorial index](README.md) · [🧪 Tutorial index →](README.md)</sub>

@@ -3,7 +3,6 @@ agent:
     name: hello-world
     kind: hosted
     version: "1"
-    config: .agent_configs/baseline/metadata.yaml
 dataset:
     name: smoke-core
     version: "1.0"

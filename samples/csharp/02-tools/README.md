@@ -1,17 +1,25 @@
 # 02 · Tools (C#)
 
-> **New idea:** the agent stops just talking and starts *doing*.
+> ⏱️ **20 min** · 📋 **Requires:** [01 · Hello World](../01-hello-world/) · 💰 **token + hosted-agent compute** · ☁️ **Creates 2 Azure resources**
 
-A hotel concierge that looks up availability with a local function.
+Add a local C# function so the agent can act as a Seattle hotel concierge.
+
+## What you'll learn
+
+- Expose a C# method as an Agent Framework tool with `AIFunctionFactory.Create`.
+- See how tool names and descriptions guide model tool choice.
+- Compare C# tool declarations with Python `@tool` declarations.
+- Keep local env and Docker ignore files aligned with the Python rung.
+
+## Steps
+
+### 1. Open this sample
 
 ```bash
-mkdir 02-tools && cd 02-tools
-azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/csharp/hosted-agents/agent-framework/local-tools/azure.yaml"
+cd samples/csharp/02-tools
 ```
 
----
-
-## The only real change from 01
+### 2. Inspect the only real change from 01
 
 ```csharp
 AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
@@ -27,75 +35,45 @@ AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential(
         tools:
         [
             AIFunctionFactory.Create(
-                GetAvailableHotels,                       // ① the method
-                "GetAvailableHotels",                     // ② tool name
-                "Gets a list of available hotels in Seattle with details about amenities and pricing.")  // ③
+                GetAvailableHotels,
+                "GetAvailableHotels",
+                "Gets a list of available hotels in Seattle with details about amenities and pricing.")
         ]);
 
-static string GetAvailableHotels(
-    string? checkInDate = null,
-    string? checkOutDate = null,
-    int? guests = null)
+static string GetAvailableHotels(string? checkInDate = null, string? checkOutDate = null, int? guests = null)
 {
-    // …returns hotel data as a string
+    // returns hotel data as a string
 }
 ```
 
 | | Python equivalent |
 |---|---|
-| ① method group | the decorated function |
-| ② explicit name | function `__name__` |
-| ③ explicit description | the **docstring** |
+| method group | decorated function |
+| explicit tool name | function `__name__` |
+| explicit description | docstring |
 
-C# passes the description explicitly rather than reading a docstring — but it plays the same
-role. **It is prompt engineering.** The model reads it to decide whether to call the tool.
+The description is prompt engineering. The model reads it to decide whether to call the tool.
 
-Parameters are inferred from the signature; optional params (`string?`, `int?`) become optional
-in the generated schema.
-
----
-
-## Run it
+### 3. Provision and run locally
 
 ```bash
+azd env set AZURE_SUBSCRIPTION_ID <id>
+azd env set AZURE_LOCATION eastus2
 azd provision
 azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 azd ai agent run --no-client
 ```
 
+In a second terminal:
+
 ```bash
 azd ai agent invoke --local "I need a hotel in Seattle for 2 guests next weekend."
-azd ai agent invoke --local "What is 2+2?"      # no tool call — compare the two
+azd ai agent invoke --local "What is 2+2?"
 ```
 
-Run without `--no-client` to watch the call/result timeline in the Agent Inspector.
+Run without `--no-client` to watch the call/result timeline in Agent Inspector.
 
----
-
-## Adding your own tool
-
-```csharp
-static string GetRoomRate(string hotelName, int nights)
-    => $"{hotelName}: $210/night × {nights} nights = ${210 * nights}.";
-
-tools:
-[
-    AIFunctionFactory.Create(GetAvailableHotels, "GetAvailableHotels", "…"),
-    AIFunctionFactory.Create(GetRoomRate, "GetRoomRate",
-        "Calculates the total room rate for a hotel and number of nights.")
-]
-```
-
-Rules:
-
-1. **Return a string** (or something trivially serialisable) — it re-enters the prompt.
-2. **Throw informative exceptions.** The model sees them and can recover.
-3. **Keep tools fast** — they sit inside the user's latency budget.
-4. **`static`** unless the tool genuinely needs instance state.
-
----
-
-## Deploy
+### 4. Deploy and monitor
 
 ```bash
 azd deploy
@@ -104,13 +82,40 @@ azd ai agent monitor -f
 azd down --force --purge
 ```
 
-Tools run **inside your container** — nothing is registered with Foundry.
+Tools run inside your container. Nothing is registered with Foundry as a separate tool resource.
 
----
+## ✅ Checkpoint
 
-👉 Next: [03 · MCP tools](../03-mcp-toolbox/)
+From this directory, verify that the manifest points at a real source folder:
 
----
+```bash
+python3 -c "import os,yaml; d=yaml.safe_load(open('azure.yaml')); s=d['services']['local-tools']; print(s['project'], os.path.isdir(s['project']))"
+```
+
+```text
+src/local-tools True
+```
+
+If you see something else, jump to *If that didn't work* below.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Hotel prompt does not use the tool. | Tool description is the model's routing hint. | Ask for Seattle hotel availability and keep the description specific. |
+| Local `dotnet run` cannot find env values. | `.env` was not created from `.env.example`. | Copy `src/local-tools/.env.example` to `.env` and fill local-only values. |
+| `project` path check prints `False`. | Manifest and source folder are out of sync. | Restore `project: src/local-tools` or the folder name. |
+
+## ✏️ Exercise
+
+Predict whether `azd ai agent invoke --local "What is 2+2?"` should call `GetAvailableHotels`.
+
+<details>
+<summary>Solution</summary>
+
+It should not call the tool. The prompt does not ask about hotels, Seattle, guests, or dates, so
+the model can answer directly.
+</details>
 
 ## Provenance
 
@@ -125,3 +130,7 @@ This sample is **adapted from upstream**, not invented here. Exact mapping so yo
 
 Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
 Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.
+
+## → Next
+
+[03 · MCP tools](../03-mcp-toolbox/)

@@ -95,38 +95,105 @@ simply producing a lot of tokens. Optimising the wrong one wastes a day.
 
 ## Adding real tracing
 
-The Agent Framework emits OpenTelemetry. To collect it you supply the destination:
+> ✅ **Verified 2026-08-09** against a live run. This section previously documented the
+> wrong method — see the warning below, which is kept because the wrong method is the
+> obvious one and you will probably try it.
+
+### ⚠️ The way that does not work
+
+The intuitive approach — passing the connection string to the agent as an environment
+variable — is **rejected by the platform**:
+
+```yaml
+# DO NOT DO THIS — azd deploy fails
+environmentVariables:
+  - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+    value: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+```
+
+```text
+RESPONSE 400: 400 Bad Request
+ERROR CODE: invalid_payload
+
+{
+  "error": {
+    "code": "invalid_payload",
+    "message": "Environment variable 'APPLICATIONINSIGHTS_CONNECTION_STRING' is reserved for
+                platform use. All FOUNDRY_* and AGENT_* variables are reserved per
+                container-image-spec. Please remove and re-try.",
+    "param": "environment_variables[0]",
+    "type": "invalid_request_error"
+  }
+}
+```
+
+Two things to take from that message:
+
+1. `APPLICATIONINSIGHTS_CONNECTION_STRING` is **reserved** — the platform injects it itself.
+2. **Every `FOUNDRY_*` and `AGENT_*` variable is reserved too.** Declaring any of them in
+   `environmentVariables` fails the deploy. See
+   [environment variables](./environment-variables.md).
+
+### The way that works
+
+Tracing is wired at the **project level**, as a connection on the Foundry account — not per
+agent. Create the resource:
 
 ```bash
 az monitor app-insights component create \
-  --app ai-<name> --location <region> --resource-group rg-<env> \
-  --query connectionString -o tsv
+  --app appi-<name> --location <region> --resource-group rg-<env> \
+  --application-type web --query connectionString -o tsv
 ```
+
+Then attach it as an `AppInsights` connection on the Cognitive Services account:
 
 ```bash
-azd env set APPLICATIONINSIGHTS_CONNECTION_STRING "<connection string>"
+AIID=$(az monitor app-insights component show --app appi-<name> -g rg-<env> --query id -o tsv)
+az rest --method put \
+  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/rg-<env>/providers/Microsoft.CognitiveServices/accounts/<account>/connections/appi-conn?api-version=2025-06-01" \
+  --body '{"properties":{"category":"AppInsights","authType":"ApiKey","group":"Azure",
+           "target":"'"$AIID"'","isSharedToAll":true,
+           "credentials":{"key":"<connection string>"},
+           "metadata":{"ApiType":"Azure","ResourceId":"'"$AIID"'"}}}'
 ```
 
-and surface it to the container in `azure.yaml`:
+The response comes back with `"isDefault": true` and `"group": "ServicesAndApps"`.
 
-```yaml
-services:
-  my-agent:
-    config:
-      environmentVariables:
-        - name: APPLICATIONINSIGHTS_CONNECTION_STRING
-          value: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+> [!IMPORTANT]
+> **No redeploy is needed, and no code change is needed.** The sample agent contains no
+> OpenTelemetry setup at all — telemetry began flowing as soon as the connection existed.
+> This is why the environment-variable approach was never necessary.
+
+### What actually arrives
+
+Three `invoke` calls, then a query 90 seconds later:
+
+```text
+timestamp                     | name         | resultCode | duration  | cloud_RoleName
+2026-08-09T00:26:57.9832888Z  | invoke_agent | 0          | 6536.2622 | agentsv2
+2026-08-09T00:27:15.4946734Z  | invoke_agent | 0          | 5824.1601 | agentsv2
+2026-08-09T00:27:29.198329Z   | invoke_agent | 0          | 6628.5839 | agentsv2
 ```
+
+Three invokes, three `requests` rows. Note what is **not** there:
+
+| Table | Rows after 3 invokes | Meaning |
+|---|---|---|
+| `requests` | **3** | one per invoke, named `invoke_agent`, role `agentsv2` |
+| `dependencies` | 0 | the model call is not surfaced as a dependency |
+| `traces` | 0 | no log-level telemetry from this sample |
+| `customEvents` | 0 | populated by **evaluation** runs, not by invokes |
+| `exceptions` | 0 | nothing failed |
 
 > [!NOTE]
-> **Illustrative, not verified.** Unlike everything above, this block was *not* executed in the
-> captured run — no App Insights resource was created. It follows the documented Foundry
-> convention and the [environment variable](./environment-variables.md) pattern the toolkit
-> uses everywhere else, but treat it as a starting point and confirm traces arrive.
+> Out of the box you get **request-level** telemetry, not distributed tracing. `duration` is
+> server-side and excludes the client round trip — compare 6536 ms here with the 7.5 s the
+> `invoke` command reported. For span-level detail inside your agent you still have to
+> instrument your own code with OpenTelemetry.
 
-Once connected, the useful Foundry-specific table is `customEvents` — evaluation results and
-agent-run records land there, which is what lets you correlate an eval score back to the exact
-response that produced it.
+`customEvents` is the useful Foundry-specific table once you start running evaluations —
+eval results land there, which is what lets you correlate a score back to the exact response
+that produced it. It stays empty until an eval runs.
 
 ---
 

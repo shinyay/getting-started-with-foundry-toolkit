@@ -1,49 +1,50 @@
 # 03 · MCP tools (C#)
 
-> **New idea:** tools you didn't write — and **two different places they can run**.
+> ⏱️ **25 min** · 📋 **Requires:** [02 · Tools](../02-tools/) · 💰 **token + hosted-agent compute** · ☁️ **Creates 2 Azure resources**
 
-This is the best sample in the whole catalog for understanding MCP, because it wires up both
-patterns side by side against the same server (Microsoft Learn).
+Use Microsoft Learn MCP tools from both your container and the model provider side.
+
+## What you'll learn
+
+- Distinguish client-side MCP from server-side hosted MCP tools.
+- Allowlist remote MCP tools instead of exposing an entire server.
+- Understand why network reachability differs locally and in Azure.
+- Follow the language-agnostic eval step after the C# code ladder.
+
+## Steps
+
+### 1. Open this sample
 
 ```bash
-mkdir 03-mcp && cd 03-mcp
-azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/csharp/hosted-agents/agent-framework/mcp-tools/azure.yaml"
+cd samples/csharp/03-mcp-toolbox
 ```
 
-> The Python catalog advertises an equivalent `03-mcp` sample, but that URL **404s**
-> (verified 2026-08-08). This C# sample is live — it is currently the best MCP reference in
-> the catalog.
+The Python catalog advertises an equivalent `03-mcp` sample, but that URL **404s** (verified
+2026-08-08). This C# sample is live and is the MCP reference in the ladder.
 
----
-
-## Two layers of MCP
+### 2. Inspect the two MCP layers
 
 ```mermaid
 flowchart TB
     subgraph A["① Client-side MCP"]
-        A1["Your container opens<br/>an McpClient connection"] --> A2["Discovers tools<br/>at startup"] --> A3["<b>Your process</b><br/>invokes them"]
+        A1["Your container opens<br/>an McpClient connection"] --> A2["Discovers tools<br/>at startup"] --> A3["Your process<br/>invokes them"]
     end
     subgraph B["② Server-side MCP"]
-        B1["You declare a<br/>HostedMcpServerTool"] --> B2["<b>The model provider</b><br/>calls the server directly"]
+        B1["You declare a<br/>HostedMcpServerTool"] --> B2["The model provider<br/>calls the server directly"]
     end
 ```
 
-| | ① Client-side | ② Server-side |
+| | Client-side | Server-side |
 |---|---|---|
 | Connection | your container → MCP server | provider → MCP server |
 | Invoked by | your process | the Responses API |
 | Discovery | `ListToolsAsync()` at startup | declared by name |
-| Network path | must be reachable **from your container** | must be reachable **from Azure** |
-| Control | full — intercept, log, wrap | minimal |
-| Latency | one extra hop through you | direct |
-| Use when | private servers, auth you control, need to observe calls | public servers, lowest latency |
+| Network path | reachable from your container | reachable from Azure |
+| Control | intercept, log, wrap | minimal |
 
----
-
-## The code
+### 3. Inspect the code
 
 ```csharp
-// ── ① Client-side: your process connects and invokes ──────────────────
 await using var learnMcp = await McpClient.CreateAsync(new HttpClientTransport(new()
 {
     Endpoint = new Uri("https://learn.microsoft.com/api/mcp"),
@@ -52,56 +53,31 @@ await using var learnMcp = await McpClient.CreateAsync(new HttpClientTransport(n
 
 var clientTools = await learnMcp.ListToolsAsync();
 
-// ── ② Server-side: the provider connects and invokes ──────────────────
 AITool serverTool = new HostedMcpServerTool(
     serverName: "microsoft_learn_hosted",
     serverAddress: "https://learn.microsoft.com/api/mcp")
 {
-    AllowedTools = ["microsoft_docs_search"],                       // ← allowlist
-    ApprovalMode = HostedMcpServerToolApprovalMode.NeverRequire     // ← no human gate
+    AllowedTools = ["microsoft_docs_search"],
+    ApprovalMode = HostedMcpServerToolApprovalMode.NeverRequire
 };
 
-// ── Both at once ──────────────────────────────────────────────────────
 List<AITool> allTools = [.. clientTools.Cast<AITool>(), serverTool];
-
-AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
-    .AsAIAgent(model: deployment, instructions: """…""", name: "mcp-tools", tools: allTools);
 ```
 
-Note `await using` — the client connection is disposed at shutdown. And `#pragma warning disable
-MEAI001`: `HostedMcpServerTool` is still **experimental**.
+Always set `AllowedTools`. Keep human approval on for anything that writes, spends, or sends.
+`HostedMcpServerTool` is still experimental, so the source suppresses `MEAI001`.
 
-### `AllowedTools` and `ApprovalMode`
-
-| Property | Why it matters |
-|---|---|
-| `AllowedTools` | allowlist. Without it the model can reach *every* tool the server exposes |
-| `ApprovalMode = NeverRequire` | no human gate — appropriate for read-only docs search, **not** for writes |
-
-> [!WARNING]
-> An MCP server is remote code you don't control. Always set `AllowedTools`, and keep human
-> approval on for anything that writes, spends or sends.
-
----
-
-## Extra packages
-
-```xml
-<PackageReference Include="ModelContextProtocol" Version="1.2.0" />
-<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
-```
-
----
-
-## Run it
+### 4. Provision and run locally
 
 ```bash
+azd env set AZURE_SUBSCRIPTION_ID <id>
+azd env set AZURE_LOCATION eastus2
 azd provision
 azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 azd ai agent run --no-client
 ```
 
-Startup prints what was discovered:
+Startup prints the discovered tool names. This block is illustrative, not a verified capture:
 
 ```text
 Connecting to Microsoft Learn MCP server (client-side)...
@@ -109,51 +85,58 @@ Client-side MCP tools: microsoft_docs_search, microsoft_docs_fetch
 Server-side MCP tool: microsoft_docs_search (via HostedMcpServerTool)
 ```
 
+Then invoke from a second terminal:
+
 ```bash
 azd ai agent invoke --local "How do I deploy a hosted agent to Microsoft Foundry?"
 ```
 
----
-
-## Deploy
+### 5. Deploy, monitor, and clean up
 
 ```bash
 azd deploy
 azd ai agent invoke "What is the Responses protocol?"
 azd ai agent monitor -f
-```
-
-> [!IMPORTANT]
-> **Network reachability differs between the two patterns.** Client-side MCP needs the server
-> reachable from *your container*; server-side MCP needs it reachable from *Azure*. A private
-> MCP server behind your corporate network works client-side but not server-side.
->
-> And remember the deployed agent authenticates as its **own managed identity**
-> (`instance_identity.principal_id` from `azd ai agent show --output json`), not your user
-> account.
-
----
-
-## Clean up
-
-```bash
 azd down --force --purge
 ```
 
----
+Client-side MCP needs the server reachable from your container; server-side MCP needs it
+reachable from Azure. A private MCP server behind a corporate network can work in one pattern
+and fail in the other.
 
-## MCP in VS Code
+## ✅ Checkpoint
 
-Agent Builder makes MCP first-class: a featured catalog, connect-existing (`stdio` or HTTP+SSE),
-scaffold a new server in Python/TypeScript (`F5` → *Debug in Agent Builder*), and reuse tools
-already installed in VS Code. See
-[guide-gui §4](../../../docs/guide-gui/README.md#4-agent-builder--prompt-agents).
+From this directory, verify that the manifest points at a real source folder:
 
----
+```bash
+python3 -c "import os,yaml; d=yaml.safe_load(open('azure.yaml')); s=d['services']['mcp-tools']; print(s['project'], os.path.isdir(s['project']))"
+```
 
-👉 Next: [04 · Evaluation](../../python/04-eval/) — language-agnostic.
+```text
+src/mcp-tools True
+```
 
----
+If you see something else, jump to *If that didn't work* below.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Client-side MCP fails locally. | The container cannot reach the MCP endpoint. | Check network access to `https://learn.microsoft.com/api/mcp`. |
+| Server-side MCP fails after deploy. | Azure/provider-side reachability differs from local container reachability. | Use a public endpoint or switch to client-side MCP for private servers. |
+| Tool list is broader than expected. | No allowlist or the wrong allowlist was used. | Keep `AllowedTools = ["microsoft_docs_search"]` for this sample. |
+
+## ✏️ Exercise
+
+Predict which side is more likely to work with a private MCP server reachable only from your
+corporate network: client-side or server-side.
+
+<details>
+<summary>Solution</summary>
+
+Client-side is more likely if the deployed container has the needed network path. Server-side
+requires the model provider/Azure service path to reach the server directly.
+</details>
 
 ## Provenance
 
@@ -168,3 +151,7 @@ This sample is **adapted from upstream**, not invented here. Exact mapping so yo
 
 Everything under `src/` other than `azure.yaml` is **byte-identical** to upstream output.
 Regenerate the original at any time with `azd ai agent init -m "<upstream azure.yaml URL>"`.
+
+## → Next
+
+[04 · Evaluation](../../python/04-eval/)

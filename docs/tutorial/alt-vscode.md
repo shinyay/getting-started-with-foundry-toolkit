@@ -1,6 +1,10 @@
-# 🖱️ GUI guide — VS Code Foundry Toolkit
+# 🖱️ Alternative route — the VS Code GUI
 
-> The same six verbs as the [CLI guide](../guide-cli/README.md), done visually.
+> ⏱️ **40 min** · 📋 **Requires:** [Lab 01](01-setup.md) · 💰 **same as the CLI route** · ☁️ **Creates 2 Azure resources**
+>
+> 🔀 **This is an alternative to labs 02–03, not an extra lab.** Do this *or* the CLI route.
+
+> The same six verbs as the [CLI guide](02-first-agent.md), done visually.
 > Sourced from the official docs (all 16 pages reviewed) cross-checked against `WHATS_NEW.md`
 > v1.6.7. Where the official docs are wrong, this page says so.
 
@@ -323,8 +327,59 @@ only complete option for automation, day-2 operations and anything reproducible.
 
 ---
 
-## Next
+## ✅ Checkpoint
 
-- 👉 [CLI guide](../guide-cli/README.md)
+You are done with this route when all four hold:
+
+| # | Check | Where |
+|---|---|---|
+| 1 | The **Microsoft Foundry** icon is in the Activity Bar | VS Code sidebar |
+| 2 | Your project appears under **Resources** with a model deployment | Foundry panel |
+| 3 | A prompt in **Agent Builder** returns a response | Agent Builder |
+| 4 | Your agent is listed after deploy | Foundry panel → Agents |
+
+Confirm from the terminal that the GUI created what you think it did — the two tracks share
+the same Azure resources:
+
+```bash
+azd env get-values | grep -E "AZURE_AI_PROJECT_NAME|AZURE_AI_MODEL_DEPLOYMENT_NAME"
+```
+
+> [!NOTE]
+> ❌ **We cannot show you screenshots.** This guide was written and verified in a terminal-only
+> environment, so every GUI step here is derived from the official documentation and the
+> extension's own changelog, not from a screen we saw. Steps are labelled accordingly. The CLI
+> route is the one this repo verifies end-to-end.
+
+## 🔧 If that didn't work
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| No Foundry icon after install | Extension needs a window reload. | **Developer: Reload Window** |
+| The extension is not in Marketplace search | Name/publisher changed during preview. | [Troubleshooting §13](../reference/troubleshooting.md) |
+| GUI and CLI disagree about what exists | They are separate tools over the same resources; the GUI caches. | Refresh the panel, or trust `azd ai agent show`. |
+| Agent Builder returns nothing | No model deployment selected. | Pick a deployment in the panel first. |
+| A GUI step here does not match your UI | The preview UI moves faster than any doc. | Follow the [official docs](https://code.visualstudio.com/docs/intelligentapps/overview); tell us what changed. |
+
+## ✏️ Exercise
+
+You deploy an agent from the GUI, then run `azd ai agent show` in a terminal in the same
+folder and it reports nothing. Is the agent deployed?
+
+<details>
+<summary>Solution</summary>
+
+**Probably yes — you are most likely in the wrong azd environment, or not in the project
+folder.** The GUI and CLI operate on the same Azure resources but resolve context differently:
+`azd` needs a `.azure/` environment in the current directory tree.
+
+Check with `azd env list` and `azd env get-values`, then confirm against the portal. Do not
+conclude the deploy failed from CLI silence alone — that is the same mistake as trusting
+`invoke`'s exit code.
+</details>
+
+## → Next
+
+- 👉 [Lab 04 — Add tools](04-add-tools.md) — continue on the CLI route.
 - 👉 [Troubleshooting](../reference/troubleshooting.md)
 - 👉 [Official docs](https://code.visualstudio.com/docs/intelligentapps/overview)
