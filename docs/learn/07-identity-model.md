@@ -126,6 +126,28 @@ The trade-off is that deploy automation must discover or record the correct inst
 
 For command-level diagnosis and captured output, use [`identity-and-rbac.md`](../reference/identity-and-rbac.md).
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You grant a Cosmos DB role to the blueprint principal ID shown in the portal. Your deployed agent still gets 403 errors. Why?</summary>
+
+The blueprint principal and the instance principal are **different identities**. Granting a role to the blueprint principal does not authorise the running agent code. You must grant the role to the **instance principal** of the deployed agent. See [identity-and-rbac.md](../reference/identity-and-rbac.md).
+</details>
+
+<details>
+<summary><b>2.</b> Two agents are deployed in the same project. Can Agent A automatically access a service that Agent B has permissions for?</summary>
+
+No. Each deployed agent gets **its own managed identity**. There is no implicit access between agents — Agent A's identity has no relationship to Agent B's role assignments. This enforces least privilege.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if your CI pipeline succeeds but the hosted agent fails with 403 on the same Azure resource?</summary>
+
+The CI pipeline likely ran under the developer's identity (or a service principal with inherited permissions), while the hosted agent uses its per-instance managed identity. That instance identity was never granted the required role. The fix is to discover the instance principal and grant it the specific role it needs.
+</details>
+
 ## → Next
 
 [Learn how versions behave](08-versioning.md)

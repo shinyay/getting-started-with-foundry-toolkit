@@ -102,6 +102,28 @@ The learn-layer concept is simple: the basic footprint is small because code dep
 
 For exact cost notes, use [`cost.md`](../reference/cost.md). For operational cleanup, use the tutorial layer.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> How many Azure resources does the default code-mode footprint create, and what are they?</summary>
+
+Exactly **2 resources**: an AI Foundry account and an AI Foundry project. The agent is a child resource under the project, not a separate top-level resource.
+</details>
+
+<details>
+<summary><b>2.</b> A teammate's sample creates three Azure resources instead of two. What design choice most likely introduced the third?</summary>
+
+Switching to **container deploy mode**, which adds an Azure Container Registry (Premium SKU) to the footprint. The extra resource provides image storage and pull access for container-based agents. See [Where code runs](05-where-code-runs.md).
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if you looked for `AZURE_CONTAINER_REGISTRY_ENDPOINT` in a default code-mode deployment?</summary>
+
+It would be empty (unset). In code deploy mode, no ACR resource exists in the basic footprint, so the endpoint variable has no value. This is verified behaviour from captured environment output.
+</details>
+
 ## → Next
 
 [Understand the identity model](07-identity-model.md)

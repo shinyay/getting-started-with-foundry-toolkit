@@ -83,7 +83,7 @@ know which one you are in.
 |---|---|---|---|
 | 📘 | **[Learn](docs/learn/README.md)** | 10 pages of mental model. **No commands to type.** | [What is the toolkit?](docs/learn/01-what-is-the-toolkit.md) |
 | 🧪 | **[Tutorial](docs/tutorial/README.md)** ⭐ | 10 checkpointed labs. Every output verified live. | [Lab 01 — Setup](docs/tutorial/01-setup.md) |
-| 📖 | **[Reference](docs/reference/README.md)** | 12 pages to look things up mid-task. | [Troubleshooting](docs/reference/troubleshooting.md) |
+| 📖 | **[Reference](docs/reference/README.md)** | 15 pages to look things up mid-task. | [Cheatsheet](docs/reference/cheatsheet.md) · [FAQ](docs/reference/faq.md) |
 
 ### Pick a route through the labs
 
@@ -99,6 +99,8 @@ know which one you are in.
 
 | I want to… | Go here |
 |---|---|
+| …get one answer to one question | [❓ FAQ](docs/reference/faq.md) ⭐ |
+| …keep one page open in a second tab | [🗂️ Cheatsheet](docs/reference/cheatsheet.md) ⭐ |
 | …not know what a word means | [📚 Glossary](docs/reference/glossary.md) ⭐ |
 | …fix an error I'm staring at | [🔧 Troubleshooting](docs/reference/troubleshooting.md) ⭐ |
 | …build in VS Code instead of the terminal | [🖱️ VS Code route](docs/tutorial/alt-vscode.md) |
@@ -107,6 +109,7 @@ know which one you are in.
 | …look up a manifest field | [🧾 `azure.yaml` reference](docs/reference/azure-yaml.md) |
 | …look up a CLI flag | [⚙️ CLI reference](docs/reference/azd-cli.md) |
 | …fix a 403 that only happens in the cloud | [🔐 Identity & RBAC](docs/reference/identity-and-rbac.md) ⭐ |
+| …split one agent into several | [🕸️ Multi-agent](docs/reference/multi-agent.md) |
 | …know what it costs | [💰 Cost](docs/reference/cost.md) |
 | …know which official docs to believe | [🗺️ Ecosystem map](docs/reference/ecosystem.md) |
 
@@ -116,9 +119,9 @@ know which one you are in.
 
 ```text
 docs/
-├── learn/              📘 read — the mental model, no commands to type
-├── tutorial/           🧪 do — checkpointed labs, every output verified ⭐
-└── reference/          📖 look up — 12 pages · manifest schema · 40 CLI commands
+├── learn/              📘 read — 10 pages of mental model, each with a self-check
+├── tutorial/           🧪 do — 10 checkpointed labs, every output verified ⭐
+└── reference/          📖 look up — 15 pages · cheatsheet · FAQ · manifest schema
                         identity · cost · observability · deploy modes · glossary
 samples/
 ├── python/       01-hello-world → 02-tools → 03-mcp-toolbox → 04-eval

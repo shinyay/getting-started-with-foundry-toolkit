@@ -2,7 +2,14 @@
 
 Lookup tables. Read the [guides](../tutorial/02-first-agent.md) first; come back here for details.
 
-Twelve pages, grouped by what you are trying to do.
+Fifteen pages, grouped by what you are trying to do.
+
+### ⚡ In a hurry
+
+| Page | Use it for |
+|---|---|
+| [`cheatsheet.md`](cheatsheet.md) | **one screen** — every command, flag, port and variable ⭐ |
+| [`faq.md`](faq.md) | **a direct answer** to one specific question ⭐ |
 
 ### 🧭 Start here
 
@@ -34,6 +41,7 @@ Twelve pages, grouped by what you are trying to do.
 |---|---|
 | [`observability.md`](observability.md) | `monitor`, logs, and adding tracing |
 | [`cost.md`](cost.md) | what actually bills, and keeping it near zero 💰 |
+| [`multi-agent.md`](multi-agent.md) | A2A details, agent cards, trust boundaries and what is *not* verified |
 | [`sample-catalog.md`](sample-catalog.md) | all 34 upstream samples (21 Python + 13 C#) |
 
 ---

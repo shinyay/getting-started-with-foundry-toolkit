@@ -136,6 +136,28 @@ The lifecycle becomes a loop once eval is involved. You change the agent, deploy
 
 Everything else in the repo is a detail underneath one of those questions.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You run `azd ai agent invoke` against a deployed agent and get exit code 0. Does that prove the agent is working correctly?</summary>
+
+No. `azd ai agent invoke` returns **exit code 0 even when the agent produced an empty response**. Exit code is not a success signal — you must inspect the actual response content. Evaluation (the sixth lifecycle verb) is what measures quality.
+</details>
+
+<details>
+<summary><b>2.</b> Which lifecycle verb answers the question "where will it live?" and what does it actually create?</summary>
+
+**Provision** answers that question. It creates the Azure resources the agent needs (at minimum an AI Foundry account and project). See [What Azure creates](06-what-azure-creates.md) for the resource footprint.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if you skipped the "run" verb and went straight from provision to deploy?</summary>
+
+You would lose the fast local feedback loop. Any bugs in your server code — missing dependencies, wrong routes, protocol mismatches — would only surface after deploy, making debugging slower and more expensive. The local run step catches those issues in seconds rather than minutes.
+</details>
+
 ## → Next
 
 [Choose the protocol contract](04-protocols.md)

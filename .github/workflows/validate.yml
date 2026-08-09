@@ -1,6 +1,6 @@
 name: validate
 
-# Keeps the repo honest without a human re-reading it. Seven cheap checks:
+# Keeps the repo honest without a human re-reading it. Nine cheap checks:
 #   1. every relative markdown link resolves
 #   2. every YAML file parses
 #   3. every azure.yaml `project:` path actually exists on disk
@@ -8,8 +8,14 @@ name: validate
 #   5. no doc page is orphaned — everything is reachable from README.md
 #   6. eval assets live in the service `project:` dir, not the sample root
 #   7. version claims agree with the canonical table in docs/reference/README.md
+#   8. the three-layer contract: learn/ teaches, tutorial/ is hands-on, reference/ is lookup
+#   9. every #anchor in a relative link matches a real heading
 # (3) caught a shipped-broken C# sample. (6) caught an unrunnable eval sample.
 # (7) exists because a preview version number appearing in 14 files is 14 places to drift.
+# (8) is AGENTS.md's "respect the layer" rule made executable: a command the reader types
+#     must not appear in learn/, and a lab with nothing to type is a learn page misfiled.
+# (9) caught 59 anchors left dangling by the Phase-2 split: the file still resolved, so
+#     check (1) stayed green while the reader silently landed at the top of the page.
 # Structure that isn't enforced decays.
 
 on:
@@ -214,5 +220,146 @@ jobs:
           for b in bad:
               print(f"::error::{b}")
           print(f"{len(bad)} version-drift problem(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check the three-layer contract holds
+        run: |
+          python - <<'PY'
+          import glob, os, re, sys
+
+          # The three-mode contract, enforced.
+          #   learn/    = 読む — understanding only. A command the reader types belongs in tutorial/.
+          #   tutorial/ = 手を動かす — a lab that never asks you to type anything is a learn page
+          #               filed in the wrong directory.
+          # Structure that isn't enforced decays; this is the rule AGENTS.md calls "respect the layer".
+
+          SHELL_LANGS = {'bash', 'sh', 'shell', 'console', 'zsh', 'powershell', 'pwsh', 'ps1', 'cmd', 'bat'}
+          CMD_START = re.compile(r'^\s*(?:\$\s+)?(azd|az|pip|pip3|python|python3|dotnet|docker|npm|npx|curl|git|winget|brew|apt|choco)\b')
+
+          bad = []
+
+
+          def fences(text):
+              """Yield (lang, start_line, [lines]) for every fenced block."""
+              out, lang, buf, start = [], None, [], 0
+              for i, line in enumerate(text.splitlines(), 1):
+                  m = re.match(r'^\s*```+\s*([A-Za-z0-9_+-]*)\s*$', line)
+                  if m:
+                      if lang is None:
+                          lang, buf, start = m.group(1).lower(), [], i
+                      else:
+                          out.append((lang, start, buf))
+                          lang = None
+                  elif lang is not None:
+                      buf.append((i, line))
+              return out
+
+
+          # ---- learn/ must contain no command the reader types -------------------------
+          for f in sorted(glob.glob('docs/learn/*.md')):
+              text = open(f).read()
+              for lang, start, body in fences(text):
+                  if lang in SHELL_LANGS:
+                      bad.append(f"{f}:{start}: '```{lang}' fence in the learn layer — "
+                                 f"move the command to docs/tutorial/ and link to it")
+                      continue
+                  for ln, line in body:
+                      if CMD_START.match(line):
+                          bad.append(f"{f}:{ln}: reader-typed command in the learn layer -> {line.strip()!r}")
+
+          # ---- every learn page carries active recall and an exit ----------------------
+          for f in sorted(glob.glob('docs/learn/*.md')):
+              base = os.path.basename(f)
+              text = open(f).read()
+              if base == 'README.md':
+                  continue
+              if '## ✅ Check your understanding' not in text:
+                  bad.append(f"{f}: missing '## ✅ Check your understanding' — the learn layer is "
+                             f"passive without it")
+              elif text.find('## ✅ Check your understanding') > text.find('## → Next'):
+                  bad.append(f"{f}: '## ✅ Check your understanding' must come before '## → Next'")
+              if '## → Next' not in text:
+                  bad.append(f"{f}: missing '## → Next'")
+              if not re.search(r'^<sub>', text, re.M):
+                  bad.append(f"{f}: missing the prev/next footer")
+
+          # ---- tutorial/ must actually be hands-on ------------------------------------
+          for f in sorted(glob.glob('docs/tutorial/*.md')):
+              if os.path.basename(f) == 'README.md':
+                  continue
+              text = open(f).read()
+              if not any(lang in SHELL_LANGS for lang, _, _ in fences(text)):
+                  bad.append(f"{f}: no shell fence — a lab with nothing to type belongs in docs/learn/")
+
+          # ---- reference/ is lookup, not a lab ----------------------------------------
+          for f in sorted(glob.glob('docs/reference/*.md')):
+              text = open(f).read()
+              for marker in ('## ✅ Checkpoint', '## ✏️ Exercise'):
+                  if marker in text:
+                      bad.append(f"{f}: '{marker}' belongs to the tutorial layer, not reference")
+
+          for b in bad:
+              print(f"::error::{b}")
+          print(f"{len(bad)} layer-contract problem(s)")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check heading anchors resolve
+        run: |
+          python - <<'PY'
+          import glob, os, re, sys
+
+          # Relative links are already checked; this checks the #fragment half of them.
+          # The Phase-2 restructure split one concepts page into ten, and every anchor that
+          # pointed into the old page kept resolving as a file while silently landing at the
+          # top. A link that lands in the wrong place is worse than one that 404s.
+
+          SLUG = re.compile(r'[^\w\- ]', re.U)
+
+
+          def anchors(path):
+              """GitHub's heading-slug algorithm: lowercase, drop punctuation, spaces -> hyphens."""
+              out, in_fence = set(), False
+              for line in open(path, encoding='utf-8'):
+                  if line.lstrip().startswith('```'):
+                      in_fence = not in_fence
+                      continue
+                  if in_fence:
+                      continue
+                  m = re.match(r'^#{1,6}\s+(.*?)\s*$', line)
+                  if not m:
+                      continue
+                  s = SLUG.sub('', m.group(1).lower()).rstrip()
+                  base = s.replace(' ', '-')
+                  slug, n = base, 1
+                  while slug in out:
+                      slug, n = f"{base}-{n}", n + 1
+                  out.add(slug)
+              return out
+
+
+          cache, bad = {}, []
+          for f in sorted(glob.glob('**/*.md', recursive=True)):
+              d = os.path.dirname(f)
+              text = open(f, encoding='utf-8').read()
+              for m in re.finditer(r'\[[^\]]*\]\(([^)\s]*#[^)\s]+)\)', text):
+                  tgt = m.group(1)
+                  if tgt.startswith(('http', 'mailto')):
+                      continue
+                  path, frag = tgt.split('#', 1)
+                  p = os.path.normpath(os.path.join(d, path)) if path else f
+                  if os.path.isdir(p):
+                      p = os.path.join(p, 'README.md')
+                  if not os.path.exists(p):
+                      continue  # the link checker already owns missing files
+                  if p not in cache:
+                      cache[p] = anchors(p)
+                  if frag not in cache[p]:
+                      bad.append(f"{f}: '#{frag}' does not exist in {p}")
+
+          for b in bad:
+              print(f"::error::broken anchor {b}")
+          print(f"{len(bad)} broken anchor(s)")
           sys.exit(1 if bad else 0)
           PY

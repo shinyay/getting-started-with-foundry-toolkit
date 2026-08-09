@@ -31,7 +31,7 @@ Go from a clean machine to `azd ai agent doctor` reporting all green.
 > version gates which manifest format it can parse. An `azd` older than **1.27.1** will
 > silently install extension `0.1.x`, which cannot read today's sample manifests, and you
 > will get a confusing `must contain 'template' field` error.
-> See [troubleshooting → version skew](../reference/troubleshooting.md#1-version-skew-the-one-that-bites-everyone).
+> See [troubleshooting → version skew](../reference/troubleshooting.md#1-version-skew--the-one-that-bites-everyone).
 
 Note that you do **not** need a local Python 3.13/3.14. `azd ai agent run` provisions its own
 interpreter via `uv` (observed: it downloaded CPython 3.14.3 automatically).

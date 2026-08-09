@@ -101,6 +101,28 @@ flowchart TB
 
 When debugging, first ask which location is failing. A dependency problem during local run is a different failure from an ACR pull failure in container deploy or a permission failure inside the hosted runtime.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You switch to container mode to install a system package your agent needs. What recurring cost have you just signed up for, and why does it apply even on days you never deploy?</summary>
+
+A **Premium-SKU** Azure Container Registry (ACR), which is billed daily regardless of deployment activity. Container mode requires ACR for image storage, and that resource incurs cost as long as it exists. See [What Azure creates](06-what-azure-creates.md).
+</details>
+
+<details>
+<summary><b>2.</b> Your agent works perfectly on your laptop but returns 500 errors once hosted. Using the three-location model, which location is failing and what is the most likely cause?</summary>
+
+Location 3 (hosted runtime) is failing. The most likely causes are: the instance identity lacks permissions that your developer identity had locally, or a runtime dependency is missing in the hosted environment. The three-location model (local → package → hosted) tells you to check identity and environment differences at the hosted stage.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if your Dockerfile declared a route path different from the protocol contract in `azure.yaml`?</summary>
+
+The hosted agent would fail to serve requests. The Foundry runtime sends traffic to the route declared in `azure.yaml`, so the container must expose exactly that contract. A mismatch means the server is listening but never receives the traffic.
+</details>
+
 ## → Next
 
 [Inspect the Azure resource footprint](06-what-azure-creates.md)

@@ -59,7 +59,38 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent show
 
 ## Validation before committing
 
+CI runs **nine** checks (`.github/workflows/validate.yml`). Run them all locally first —
+none of them need Azure, network access or credentials:
+
 ```bash
-# YAML sanity for every sample manifest
-find samples -name azure.yaml -exec python3 -c "import sys,yaml;yaml.safe_load(open(sys.argv[1]))" {} \;
+python3 - <<'PY'
+import re, subprocess, sys, yaml
+steps = yaml.safe_load(open('.github/workflows/validate.yml'))['jobs']['validate']['steps']
+fail = 0
+for s in steps:
+    if not s.get('name', '').startswith('Check'):
+        continue
+    m = re.search(r"python - <<'PY'\n(.*?)\nPY\s*$", s['run'], re.S)
+    if not m:
+        continue
+    r = subprocess.run([sys.executable, '-c', m.group(1)], capture_output=True, text=True)
+    tail = [l for l in r.stdout.strip().splitlines() if not l.startswith('::error')]
+    fail += r.returncode != 0
+    print(f"[{'PASS' if r.returncode == 0 else 'FAIL'}] {s['name']}: {tail[-1] if tail else r.stderr[:200]}")
+    if r.returncode:
+        print("\n".join(l for l in r.stdout.splitlines() if l.startswith('::error')))
+sys.exit(1 if fail else 0)
+PY
 ```
+
+| # | Check | Why it exists |
+|---|---|---|
+| 1 | Relative links resolve | |
+| 2 | Every YAML parses | |
+| 3 | `azure.yaml` `project:` paths exist | caught a shipped-broken C# sample |
+| 4 | Tutorial labs carry the lab skeleton | |
+| 5 | No doc page is orphaned from `README.md` | |
+| 6 | Eval assets live in the service `project:` dir | caught an unrunnable eval sample |
+| 7 | Version claims match `docs/reference/README.md` | one version in 14 files is 14 places to drift |
+| 8 | The three-layer contract holds | rule 2 above, made executable |
+| 9 | Every `#anchor` matches a real heading | caught 59 dangling anchors that check 1 could not see |

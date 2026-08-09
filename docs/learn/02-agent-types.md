@@ -100,6 +100,28 @@ The GUI can participate in hosted-agent authoring through its hosted-agent flow.
 
 A simple rule works for this guide: if a page discusses source code, local ports, container images, `azure.yaml` protocols or managed identities for running code, it is talking about hosted agents.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You deploy the same hosted agent a second time without changing the name. Do you get two agents or one agent with two versions?</summary>
+
+One agent with two versions. Each deploy of the same agent name produces a new version (e.g. `:2`), not a second agent. The agent has its own managed identity, separate from your developer identity. See [Versioning](08-versioning.md) and [Identity](07-identity-model.md).
+</details>
+
+<details>
+<summary><b>2.</b> A page discusses `azure.yaml` protocols, container images, and managed identities. Is it talking about prompt agents or hosted agents?</summary>
+
+Hosted agents. The simple rule from this page: if the discussion involves source code, local ports, container images, `azure.yaml` protocols, or managed identities for running code, it concerns hosted agents.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if you tried to run a prompt agent locally as an HTTP server the way you would a hosted agent?</summary>
+
+It would not work. Prompt agents are declarative Foundry records — they do not have a local server process to start. The local run loop (serve, test, iterate) applies only to hosted agents.
+</details>
+
 ## → Next
 
 [Learn the six lifecycle verbs](03-lifecycle.md)

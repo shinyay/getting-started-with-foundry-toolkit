@@ -121,6 +121,30 @@ Do not ask "what should the product do?" first. Ask "what did this installed ver
 
 That habit is why the reference layer is so large. It is also why this learn layer avoids making operational claims unless they are backed by repo content or captured evidence.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You use `${MY_VAR}` in `azure.yaml` but forget to set it. What happens during provision?</summary>
+
+Provision **silently succeeds**. An unset `${VAR}` in `azure.yaml` expands to an empty string — there is no error or warning. This can cause subtle downstream failures that are hard to trace back to the missing value.
+</details>
+
+<details>
+<summary><b>2.</b> Name the three kinds of drift this page identifies, and give one stabiliser for each.</summary>
+
+1. **Tooling drift** (azd/extensions change) — stabiliser: pin and print tool versions in automation.
+2. **Documentation drift** (old pages, dead links) — stabiliser: prefer installed help and verified repo evidence over external docs.
+3. **Runtime drift** (agent/toolbox/model versions change) — stabiliser: use agent and toolbox version pinning.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if your CI pipeline used "latest" for the azd version and a breaking change shipped overnight?</summary>
+
+The pipeline could silently pick up a new azd version with a different command surface, missing flags, or a different manifest parser. Your build might fail — or worse, succeed with different behaviour. The page warns that in preview, "latest that my old host can install" is not the same as "latest product behaviour". Pinning the version prevents this.
+</details>
+
 ## → Next
 
 [Understand multi-agent patterns](10-multi-agent.md)

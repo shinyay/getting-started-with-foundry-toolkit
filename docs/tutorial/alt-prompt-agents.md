@@ -29,7 +29,7 @@ flowchart LR
 
 ## 1. The precise distinction
 
-The [concepts page](../learn/README.md#2-two-kinds-of-agent-prompt-vs-hosted) gives the
+The [concepts page](../learn/02-agent-types.md) gives the
 short version. The deeper distinction is about **where behavior lives**.
 
 | Question | Prompt agent | Hosted agent |

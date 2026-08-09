@@ -267,7 +267,7 @@ protocols:
     version: 2.0.0
 ```
 
-Multiple protocols are allowed. See [concepts §4](../learn/README.md#4-the-protocol-is-the-contract).
+Multiple protocols are allowed. See [concepts §4](../learn/04-protocols.md).
 
 ---
 

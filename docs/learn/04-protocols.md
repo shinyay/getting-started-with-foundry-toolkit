@@ -128,6 +128,28 @@ The crucial gotcha from the existing docs is that `activity` agents cannot use `
 
 Protocol is therefore one of the first design decisions worth writing down, even for a small sample.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You declare your agent as `activity` protocol and then try `azd ai agent invoke`. What happens and why?</summary>
+
+It fails (or produces no meaningful result) because `azd ai agent invoke` does not speak Bot Framework Activity protocol. This is a protocol mismatch, not a bug in invoke. The `activity` protocol is for Teams/M365 channels.
+</details>
+
+<details>
+<summary><b>2.</b> You need to use the Foundry optimizer with your agent. Which protocol must the agent declare?</summary>
+
+The agent must use the `responses` protocol. The optimizer requires the OpenAI Responses API shape — agents on other protocols cannot use it.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if you chose a request/response protocol for a voice scenario that requires simultaneous send and receive?</summary>
+
+The design would feel awkward or fail outright. Voice and realtime scenarios need duplex communication (both sides sending events while the interaction is alive), which requires the `realtime` WebSocket protocol, not a request/response shape.
+</details>
+
 ## → Next
 
 [See where the code runs](05-where-code-runs.md)

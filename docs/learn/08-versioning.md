@@ -123,6 +123,28 @@ When discussing behaviour, include both versions when they matter:
 
 Versioning is not bookkeeping. It is how preview-era systems stay debuggable.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> You deploy your agent three times without changing the name. What version label does the third deployment get?</summary>
+
+`:3`. Each deploy of the same agent name increments the version number. You end up with `my-agent:1`, `my-agent:2`, `my-agent:3` — three versions of one agent, not three separate agents.
+</details>
+
+<details>
+<summary><b>2.</b> Your agent's answers suddenly change but you haven't modified any code. Using the two-axis model on this page, what else could have changed?</summary>
+
+The **toolbox version** the agent depends on may have changed. Agent behaviour has two axes: the agent version (code/config) and the toolbox version (tools endpoint). A new toolbox version can alter tool behaviour and therefore agent answers, even when agent code is unchanged.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if you published a new toolbox version and an older agent version was pinned to the old toolbox endpoint?</summary>
+
+The older agent version would continue using the **old toolbox endpoint** and its behaviour would be unaffected. Toolbox endpoints are version-pinned, so publishing a new toolbox version cannot silently change an agent configured to call the old version-specific endpoint.
+</details>
+
 ## → Next
 
 [Learn how to live with preview](09-living-with-preview.md)

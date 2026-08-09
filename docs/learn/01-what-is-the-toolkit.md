@@ -97,6 +97,28 @@ After you separate the four products, the system becomes easier to learn:
 
 Everything else in this layer builds on that split.
 
+## ✅ Check your understanding
+
+Three questions. If you can answer all three, move on.
+
+<details>
+<summary><b>1.</b> A colleague says "I installed the Microsoft Foundry Toolkit." What clarifying question should you ask, and why?</summary>
+
+You should ask *which* product they installed — the VS Code extension, the `azd` CLI extensions, Canvas, or access to the Foundry service itself. The name refers to an ecosystem of four distinct products, not one installable thing. See the four-product diagram at the top of this page, and [ecosystem.md](../reference/ecosystem.md) for what each one covers.
+</details>
+
+<details>
+<summary><b>2.</b> How many azd extensions exist in the ecosystem, and which one is easiest to overlook?</summary>
+
+There are **5** azd extensions, not 4. The one most often missed is `azure.ai.connections`. See the [ecosystem map](../reference/ecosystem.md) for the full list.
+</details>
+
+<details>
+<summary><b>3.</b> What would happen if you tried to verify a product claim by searching for "Foundry Toolkit" in the Azure portal?</summary>
+
+You would find nothing specific enough to prove the claim, because "Toolkit" is an ecosystem label, not a single Azure resource or service name. The useful simplification on this page explains that *Microsoft Foundry* is the service where hosted results live, while the toolkit label spans authoring surfaces and guidance products.
+</details>
+
 ## → Next
 
 [Understand the two agent types](02-agent-types.md)
