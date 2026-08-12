@@ -93,6 +93,10 @@ as code.
 
 ## Verified ejection behaviour
 
+> [!NOTE]
+> In both logs below the absolute capture directory is shortened to `<work-dir>`; you will
+> see your own path there. Every other character is verbatim.
+
 <details>
 <summary>✅ Verified Bicep init/eject log excerpt</summary>
 
