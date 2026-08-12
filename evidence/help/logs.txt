@@ -1,0 +1,2 @@
+
+ERROR: unknown command "logs" for "agent"

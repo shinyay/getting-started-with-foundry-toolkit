@@ -1,0 +1,36 @@
+Delete a hosted agent and all of its versions.
+
+If --version is specified, only that version is deleted (the agent itself remains).
+
+If the agent has active sessions, deletion will fail unless --force is passed.
+Use --force to terminate active sessions and delete the agent.
+
+The agent name is resolved from the azd environment when omitted.
+
+Usage:
+  agent delete [name] [flags]
+
+Examples:
+  # Delete agent (auto-resolves name from azure.yaml)
+  azd ai agent delete
+
+  # Delete a specific agent by name
+  azd ai agent delete my-agent
+
+  # Delete a specific version only
+  azd ai agent delete my-agent --version 2
+
+  # Force-delete even if active sessions exist
+  azd ai agent delete my-agent --force
+
+Flags:
+      --force            Force deletion even if the agent has active sessions
+  -h, --help             help for delete
+      --version string   Delete a specific version only (the agent itself remains)
+
+Global Flags:
+  -C, --cwd string           Sets the current working directory
+      --debug                Enables debug and diagnostics logging
+  -e, --environment string   The name of the environment to use
+      --no-prompt            Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string        The output format (supported: json, none) (default "none")

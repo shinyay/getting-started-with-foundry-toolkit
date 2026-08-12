@@ -128,10 +128,15 @@ docs/
 ├── tutorial/           🧪 do — 10 checkpointed labs, every output verified ⭐
 └── reference/          📖 look up — 15 pages · cheatsheet · FAQ · manifest schema
                         identity · cost · observability · deploy modes · glossary
+evidence/               🔬 prove — 49 verbatim --help captures the docs are checked against
 samples/
 ├── python/       01-hello-world → 02-tools → 03-mcp-toolbox → 04-eval
 └── csharp/       01 → 03 (step 04 is CLI-level and language-agnostic)
 ```
+
+> **"How do I know any of this is true?"** — [`evidence/`](evidence/) is the answer.
+> It holds the raw `--help` output every flag, default and subcommand claim was checked
+> against, including four captures proving certain commands **do not** exist.
 
 ### The sample ladder
 

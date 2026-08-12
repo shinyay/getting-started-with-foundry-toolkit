@@ -16,12 +16,14 @@ are in. Content that does the wrong job for its layer belongs in a different lay
 | `docs/reference/` | 📖 **look up** | Lookup tables: schema, CLI surface, env vars, ports, troubleshooting. No narrative. |
 | `samples/python/` | 🧪 **do** | Progressive ladder 01 → 04, Python. Clone-and-run. |
 | `samples/csharp/` | 🧪 **do** | The same ladder in C#, 01 → 03 (step 04 is language-agnostic). |
+| `evidence/` | 🔬 **prove** | Verbatim `--help` captures. Not prose — the baseline rule 1 is checked against. |
 
 ## Rules when editing this repo
 
 1. **Never invent CLI output.** Every fenced block labelled *verified* was captured from a
    real run against real Azure. If you change a command, re-run it or mark the block as
-   illustrative.
+   illustrative. Check the claim against [`evidence/help/`](evidence/) before you write it —
+   49 verbatim `--help` captures are the authority for every flag, default and subcommand.
 2. **Respect the layer.** A command the reader types does not belong in `learn/`. An
    explanation of *why* does not belong in `tutorial/` — link to `learn/` instead. A
    narrative walkthrough does not belong in `reference/`.

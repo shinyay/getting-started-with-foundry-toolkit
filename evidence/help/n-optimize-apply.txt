@@ -1,0 +1,26 @@
+Download the optimized configuration and skill files from an optimization
+candidate and write them into your local azd project under .agent_configs/.
+
+After applying, run 'azd deploy' to deploy the optimized agent version.
+
+Usage:
+  agent optimize apply [flags]
+
+Examples:
+  # Apply candidate config locally, then deploy
+  azd ai agent optimize apply --candidate candidate_abc123
+  azd deploy
+
+Flags:
+      --agent string              Agent service name from azure.yaml (auto-detected if only one exists)
+      --candidate string          Candidate ID from optimization results (required)
+      --endpoint string           Optimization service endpoint (for local dev)
+  -h, --help                      help for apply
+  -p, --project-endpoint string   Foundry project endpoint URL
+
+Global Flags:
+  -C, --cwd string           Sets the current working directory
+      --debug                Enables debug and diagnostics logging
+  -e, --environment string   The name of the environment to use
+      --no-prompt            Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string        The output format (default "default")

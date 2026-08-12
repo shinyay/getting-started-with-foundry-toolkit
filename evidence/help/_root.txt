@@ -1,0 +1,42 @@
+
+███████╗ ██████╗ ██╗   ██╗███╗   ██╗██████╗ ██████╗ ██╗   ██╗
+██╔════╝██╔═══██╗██║   ██║████╗  ██║██╔══██╗██╔══██╗╚██╗ ██╔╝
+█████╗  ██║   ██║██║   ██║██╔██╗ ██║██║  ██║██████╔╝ ╚████╔╝ 
+██╔══╝  ██║   ██║██║   ██║██║╚██╗██║██║  ██║██╔══██╗  ╚██╔╝  
+██║     ╚██████╔╝╚██████╔╝██║ ╚████║██████╔╝██║  ██║   ██║   
+╚═╝      ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝   ╚═╝   
+                                                             
+v1.0.0-beta.9 
+Visit the docs at https://aka.ms/azd-ai-agent-docs
+
+Ship agents with Microsoft Foundry from your terminal. (Preview)
+
+Usage:
+  agent [command]
+
+Available Commands:
+  code        Manage agent source code. (Preview)
+  delete      Delete a hosted agent.
+  doctor      Diagnose problems with an azd ai agent project.
+  endpoint    Manage agent endpoint and card configuration.
+  eval        Create and run quick evals for an agent.
+  files       Manage files in a hosted agent session.
+  init        Initialize a new AI agent project. (Preview)
+  invoke      Send a message to your agent.
+  monitor     Monitor logs from a hosted agent.
+  optimize    Evaluate and optimize AI agents.
+  run         Run your agent locally for development.
+  sample      Browse the curated catalog of agent samples and azd templates.
+  sessions    Manage sessions for a hosted agent endpoint.
+  show        Show the status of a hosted agent.
+  version     Prints the version of the application
+
+Flags:
+  -C, --cwd string           Sets the current working directory
+      --debug                Enables debug and diagnostics logging
+  -e, --environment string   The name of the environment to use
+  -h, --help                 help for agent
+      --no-prompt            Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string        The output format (default "default")
+
+Use "agent [command] --help" for more information about a command.

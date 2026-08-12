@@ -20,6 +20,41 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`evidence/` — 49 verbatim `--help` captures (212 KB).** The baseline rule 1 is checked
+  against now lives in the repo instead of in a throwaway working directory, so a
+  contributor can diff a changed command against what was actually observed. Includes four
+  captures that are *negative* evidence — proof that `azd ai agent deploy`, `env`, `logs`
+  and `provision` do **not** exist, which is the mistake a reader arriving from `azd` core
+  is most likely to make.
+
+### Verified
+
+- **Toolchain re-checked 2026-08-12.** `azd` 1.30.0 and all five extensions still report
+  *Up to date*, so `v2026.08.0` remains accurate — no re-cut needed.
+- **A second exit-code false positive.** `azd ai agent sample show --help` exits **0** and
+  silently prints the parent help, while `azd ai agent deploy --help` exits **1**. An
+  unknown *nested* subcommand therefore succeeds where an unknown top-level one fails.
+  Recorded in the [FAQ](docs/reference/faq.md), which previously described the `invoke`
+  case as if it were isolated.
+
+### Fixed
+
+- **Removed the agent's local capture directory from two "verified" logs.** The Bicep and
+  Terraform ejection excerpts in [infrastructure](docs/reference/infrastructure.md) carried
+  an absolute session-state path. It was genuine `azd` output, not a fabrication, but it is
+  meaningless to a reader — shortened to `<work-dir>` and labelled as shortened, so the
+  block stays honest about no longer being character-for-character verbatim.
+- **CI moved off Node 20 actions.** `actions/checkout` and `actions/setup-python` were
+  being force-run on Node 24 with a deprecation warning; when Node 20 is removed the nine
+  validation checks would have stopped running, which is this repo's only guarantee that
+  its documentation still holds. Both bumped to `@v7`.
+
+---
+
 ## [2026.08.0] — 2026-08-09
 
 First tagged release. It covers all work to date, since there was no prior release to

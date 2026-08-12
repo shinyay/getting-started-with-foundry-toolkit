@@ -1,0 +1,28 @@
+Show the status of a hosted agent.
+
+The agent name and version are resolved automatically from the azure.yaml service
+configuration and the current azd environment. Optionally specify the service name
+(from azure.yaml) as a positional argument when multiple agent services exist.
+
+Usage:
+  agent show [name] [flags]
+
+Examples:
+  # Show status (auto-resolves from azure.yaml)
+  azd ai agent show
+
+  # Show status for a specific agent service
+  azd ai agent show my-agent
+
+  # Show status as JSON
+  azd ai agent show --output json
+
+Flags:
+  -h, --help   help for show
+
+Global Flags:
+  -C, --cwd string           Sets the current working directory
+      --debug                Enables debug and diagnostics logging
+  -e, --environment string   The name of the environment to use
+      --no-prompt            Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string        The output format (supported: json, table) (default "table")

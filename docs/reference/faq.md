@@ -101,6 +101,17 @@ instead. See [Troubleshooting](troubleshooting.md).
 > [!CAUTION]
 > This is the single most dangerous false-positive in the toolkit.
 
+It is not the only one. An unknown **nested** subcommand also exits 0 — it silently
+prints its parent's help instead of failing:
+
+| Command | Exit | What you get |
+|---|:--:|---|
+| `azd ai agent deploy --help` | **1** | `ERROR: unknown command "deploy" for "agent"` |
+| `azd ai agent sample show --help` | **0** | the `sample` help — and `show` does not exist |
+
+Treat exit codes from this toolkit as a hint, never as proof. Both cases are captured
+in [`evidence/help/`](../../evidence/).
+
 ### How do I list my deployed agents?
 
 `azd ai agent list` does **not exist**. Use the Azure AI Foundry portal or the

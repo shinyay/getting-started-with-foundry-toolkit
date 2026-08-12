@@ -1,0 +1,19 @@
+Commands for managing the source code of code-based hosted agents.
+
+Usage:
+  agent code [command]
+
+Available Commands:
+  download    Download agent source code from Foundry. (Preview)
+
+Flags:
+  -h, --help   help for code
+
+Global Flags:
+  -C, --cwd string           Sets the current working directory
+      --debug                Enables debug and diagnostics logging
+  -e, --environment string   The name of the environment to use
+      --no-prompt            Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string        The output format (default "default")
+
+Use "agent code [command] --help" for more information about a command.

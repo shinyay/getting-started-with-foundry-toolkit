@@ -1,0 +1,24 @@
+Browse the curated catalog of agent samples and azd templates.
+
+The catalog is the same source the interactive `azd ai agent init` picker uses.
+Subcommands emit machine-readable JSON or human-readable text so coding agents
+and humans can both discover manifests and repos to feed back into
+`azd ai agent init -m <url>` or `azd init -t <url>`.
+
+Usage:
+  agent sample [command]
+
+Available Commands:
+  list        List available agent samples that can be used with `azd ai agent init -m`.
+
+Flags:
+  -h, --help   help for sample
+
+Global Flags:
+  -C, --cwd string           Sets the current working directory
+      --debug                Enables debug and diagnostics logging
+  -e, --environment string   The name of the environment to use
+      --no-prompt            Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string        The output format (default "default")
+
+Use "agent sample [command] --help" for more information about a command.

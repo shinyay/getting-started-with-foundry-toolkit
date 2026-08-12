@@ -1,0 +1,32 @@
+Manage Foundry toolboxes.
+
+A toolbox is a versioned, named collection of connection-backed tools that
+agents reference at run time. Each version is immutable: mutations (connection
+add/remove, skill add/remove) create a new version but never change which
+version is the default. Use 'azd ai toolbox publish <toolbox> <version>'
+to promote a version.
+
+Usage:
+  toolbox [command]
+
+Available Commands:
+  connection  Manage the connection-backed tools attached to a toolbox.
+  create      Create a toolbox and its initial version from a file.
+  delete      Delete a toolbox or a single version.
+  list        List toolboxes on the project.
+  publish     Set the default version for a toolbox.
+  show        Show a toolbox version, including its computed MCP endpoint.
+  skill       Manage skill references attached to a toolbox.
+  version     Display the extension version
+  versions    Inspect toolbox versions.
+
+Flags:
+  -C, --cwd string                Sets the current working directory
+      --debug                     Enables debug and diagnostics logging
+  -e, --environment string        The name of the environment to use
+  -h, --help                      help for toolbox
+      --no-prompt                 Runs without prompts. Uses existing values; fails if any required value or decision cannot be resolved automatically.
+  -o, --output string             The output format (supported: table, json) (default "table")
+      --project-endpoint string   Foundry project endpoint URL. When unset, falls back to the active azd environment, azd user config, then FOUNDRY_PROJECT_ENDPOINT.
+
+Use "toolbox [command] --help" for more information about a command.
