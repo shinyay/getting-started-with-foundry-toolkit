@@ -120,6 +120,87 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Walking Lab 02 on a second machine, against live Azure, found sixteen more defects.** Every
+  step from `sample list` to teardown was run by hand and its real output compared with the
+  page. Two classes dominated.
+  - **Numbers and names copied from the wrong run.** § 5 timed `azd provision` at `1m20s`,
+    which is the `01-hello-world` figure from 2026-08-08; both this lab's captured run and the
+    2026-08-12 re-run took **1m24s**, exactly as
+    [`docs/reference/README.md`](docs/reference/README.md#verified-runs) already recorded. The
+    resource names told the same story: the page showed `cog-56mzb54ouruu6/rdpy`, a random
+    four-character project name that this flow never produces. The catalog sample names its
+    project after the service, truncated to 32 characters —
+    `cog-…/agent-framework-agent-basic-resp` — so a reader checking their own output against
+    the page would find it structurally different. Both corrected, and the
+    `FOUNDRY_PROJECT_ENDPOINT` example with them.
+  - **Verified blocks that were quietly edited.** Two `doctor` lines had been hand-wrapped to
+    fit the page (the real ones are 147 and 133 characters, unwrapped); the `RuntimeError` in
+    the model-name gotcha had been split across two lines; twelve identical
+    `Foundry deployment in progress` lines had been collapsed into `…`; and the `run` startup
+    log had fields deleted from the *middle* of lines with no ellipsis. All restored verbatim.
+    [`AGENTS.md`](AGENTS.md) rule 1 now forbids re-wrapping a verified block, and requires pty
+    capture — a redirect drops azd's `Next:` blocks entirely while adding spinner lines no
+    reader sees, which is where five of these defects came from.
+- **The `run` section blamed the wrong component for the scary traceback.** The NOTE described
+  a `169.254.169.254` timeout as `DefaultAzureCredential` probing for a managed identity, but
+  quoted the URL `/metadata/instance/compute`. There are in fact **two** such spans and the
+  page conflated them: the startup one is the OpenTelemetry distro's Azure-VM resource detector
+  (`python-requests`, 0.2 s), and the credential one appears later on first invoke against
+  `/metadata/identity/oauth2/token` (`azsdk-python-identity`, 1 s), immediately followed by
+  `DefaultAzureCredential acquired a token from AzureCliCredential`. Both are now documented,
+  with the evidence that distinguishes them.
+- **`azd ai agent run` tells you to `curl` a URL that cannot work for this sample.** Its
+  terminal hint points at `/invocations/docs/openapi.json`, which is registered only by the
+  Invocations protocol package; this sample speaks Responses and serves `POST /responses`. The
+  CLI probes that URL itself at startup and logs its own `404` one line above the hint. Now
+  carries a warning naming the cause, so a reader who follows the CLI's advice knows the 404 is
+  not theirs.
+- **Nothing said that running "locally" still bills you.** § 4 says everything before
+  `provision` is free, which is true, and then the local loop calls
+  `POST …/openai/v1/responses` for every turn. The emitted span records the token counts.
+  Stated explicitly.
+- **`doctor` does not check the two values § 3 sets.** Measured: running it *before*
+  `azd env set` gives the identical `6 passed, 1 failed, 6 skipped`, with `manual env vars set`
+  green while `AZURE_SUBSCRIPTION_ID` and `AZURE_LOCATION` are unset. A section titled *check
+  before you spend money* now says what it cannot check.
+- **The fifth `doctor` state was undocumented.** After `provision` and before `deploy` it
+  reports `10 passed, 1 failed, 2 skipped`, the single failure being `Hosted agents are active`
+  with `fix: Run azd deploy`. Captured and added to Lab 02 § 5. Lab 01 § 7 claimed there were
+  "three states you will actually see" and listed three; the table now lists all five with
+  their counts.
+- **Terminal-only output that the page never showed.** `init`, `run` and `invoke` each end with
+  a `Next:` block naming the next command — including the `cd` that Lab 02 spends a callout
+  insisting on, and `azd ai agent monitor --follow`, which no lab had mentioned. `sample list`
+  ends with a line pointing at `--output json`. `init` prints a four-line
+  `Set the missing values before running azd provision` remediation, including the optional
+  `AZURE_AI_DEPLOYMENTS_LOCATION`. `run` prints
+  `Activate with: source .venv/bin/activate.<shell>`. All were absent because they do not
+  survive a redirect. All restored.
+- **The subscription ID leaks in three new places**, now flagged where each appears: the
+  `Subscription: <name> (<guid>)` line and portal URL that `provision` prints, and
+  `microsoft.foundry.project.id` — a full ARM resource ID — on **every** OpenTelemetry span the
+  running agent writes to stdout, alongside the prompt, the reply and token counts. In a
+  captured run, 373 of 732 stdout lines were span JSON; the page had shown a tidy four-line
+  startup log.
+- **`-o table` drops `id` *and* `type`, and the fix is one character.** Lab 01 § 4 documented
+  the `id` case as an unavoidable quirk and worked around it with a second command. Asking for
+  the same value under three key names showed that only the lowercase `id` and `type` columns
+  vanish — `{sub:name, Id:id}` renders both. Lab 01 § 4 now states the rule, and Lab 02 § 5's
+  `az resource list` query uses `Type:type` so its output block matches what the reader gets.
+- **Smaller corrections from the same run.** `sample list` is ordered six `featured` entries
+  first then the other fifteen, each group alphabetical, so the sample this lab uses is 5th —
+  the page said only "not the first one listed"; `featured` and `recommended` are invisible in
+  the text form, which is the practical reason to use `--output json`; four more sample titles
+  besides `01-basic` ship in both protocols; `init` creates *and selects* an environment named
+  `<project>-dev`, so `azd env new` is never needed; `.env` is created mode `0600` and matched
+  by `.gitignore` line 1; and `azure.yaml`'s `runtime: python_3_13` is the hosted runtime, not
+  the `CPython 3.14.3` that `run` fetches locally — verified on a machine whose system Python
+  is 3.12.3.
+- **Lab 03 understated how far its capture diverges from Lab 02.** Its opening NOTE said "only
+  the agent name differs", but its Playground URL and endpoint also embed a Cognitive Services
+  account and a Foundry project name that a Lab 02 reader will not have. The NOTE now names all
+  three substitutions.
+
 - **Walking Lab 01 on a second machine found eight more defects.** A reader ran every step and
   pasted real output; each divergence from the page is fixed below.
   - **`az account show --query "{sub:name, id:id, user:user.name}" -o table` never printed the

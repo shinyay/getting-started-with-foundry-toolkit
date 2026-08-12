@@ -209,17 +209,20 @@ MCAPS-…                                   you@example.com
 Logged in to Azure as you@example.com
 ```
 
-Lab 02 asks for your **subscription ID**, and you need a separate command to get it:
+Lab 02 asks for your **subscription ID**. You never have to read it — [Lab 02 § 3](02-first-agent.md#3-env--point-at-your-subscription)
+pipes it straight into `azd`. To print it on its own:
 
 ```bash
 az account show --query id -o tsv
 ```
 
 > [!WARNING]
-> **`-o table` silently drops an `id` column.** Ask for `{sub:name, id:id, user:user.name}`
-> with `-o table` and the `Id` column simply is not rendered — the same query with `-o json`
-> returns it. Request the ID on its own line, as above, or you will go looking for a value the
-> previous command never printed.
+> **`-o table` drops columns whose key is `id` or `type` — capitalise the key.**
+> `--query "{sub:name, id:id}" -o table` renders **only** `Sub`; `--query "{sub:name, Id:id}"`
+> renders both. Verified 2026-08-12 by asking for the same value under three names —
+> `{name:name, id:id, foo:id, type:name}` printed `Name` and `Foo` and silently dropped the
+> other two. You meet the same behaviour with `type` in
+> [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
 
 If you have several subscriptions, pin one:
 
@@ -278,13 +281,15 @@ command that fixes it.
 
 **It reads a project, and you do not have one yet.** `azd ai agent init` in
 [Lab 02](02-first-agent.md) creates the first one. So this section teaches you to *read*
-`doctor`; there are three states you will actually see, in three different places:
+`doctor`; there are five states you will actually see, each in a different place:
 
 | Output | Where you can actually get it |
 |---|---|
-| Outside any project | the [Checkpoint](#-checkpoint) at the end of this lab |
-| Scaffolded, before `provision` | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
-| All-green | [Lab 03 § 4](03-deploy.md#4-doctor--check-local-and-remote-state), after deploying |
+| `1 passed, 1 failed, 11 skipped` — outside any project | the [Checkpoint](#-checkpoint) at the end of this lab |
+| `4 passed, 1 failed, 8 skipped` — project, but no environment selected | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
+| `6 passed, 1 failed, 6 skipped` — scaffolded, before `provision` | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
+| `10 passed, 1 failed, 2 skipped` — provisioned, before `deploy` | [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources) |
+| `11 passed, 0 failed, 2 skipped` — all green | [Lab 03 § 4](03-deploy.md#4-doctor--check-local-and-remote-state) |
 
 How to read any `doctor` run:
 

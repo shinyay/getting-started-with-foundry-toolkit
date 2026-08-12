@@ -10,8 +10,10 @@ Deploy the local agent to Foundry, verify the hosted version, then destroy every
 > [`samples/python/01-hello-world`](../../samples/python/01-hello-world/), whose `azure.yaml`
 > sets `name: hello-world`. [Lab 02](02-first-agent.md) instead initialises the *catalog*
 > sample, which keeps its own name — and `init` never renames it. The commands, field names,
-> ordering and timings below are unaffected; only the agent name differs. Re-run the whole page
-> against the catalog sample and the name is the single substitution to make.
+> ordering and timings below are unaffected. **Three strings will differ** from what you see:
+> the agent name above, the Cognitive Services account (`cog-…` is random per run), and the
+> Foundry project — `rdpy` here, but `agent-framework-agent-basic-resp` in the Lab 02 run.
+> Both appear inside the Playground URL and the endpoint. Substitute your own.
 
 ## What you'll learn
 

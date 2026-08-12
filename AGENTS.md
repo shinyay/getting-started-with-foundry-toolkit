@@ -24,6 +24,11 @@ are in. Content that does the wrong job for its layer belongs in a different lay
    real run against real Azure. If you change a command, re-run it or mark the block as
    illustrative. Check the claim against [`evidence/help/`](evidence/) before you write it —
    49 verbatim `--help` captures are the authority for every flag, default and subcommand.
+   **Capture through a pty — `script -qec '…' /dev/null`, never `>`.** azd's terminal output
+   and its redirected output differ *in both directions*: a redirect drops the `Next:` guidance
+   blocks entirely and adds spinner lines a reader never sees. Five wrong blocks in
+   `docs/tutorial/` came from redirect captures. Do not hand-wrap, re-indent or elide lines
+   inside a verified block; if you must shorten one, say so in the `<summary>`.
 2. **Respect the layer.** A command the reader types does not belong in `learn/`. An
    explanation of *why* does not belong in `tutorial/` — link to `learn/` instead. A
    narrative walkthrough does not belong in `reference/`.
