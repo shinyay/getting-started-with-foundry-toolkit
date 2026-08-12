@@ -228,7 +228,12 @@ Claude Code:  /plugin install azure@claude-plugins-official
 
 ### 7. Verify everything
 
-Inside any initialised agent project:
+`doctor` reads a project, so this section needs one — and you will not have one until
+[Lab 02](02-first-agent.md) runs `azd ai agent init`. Read it now to learn how to *interpret*
+the output; run it for real at the start of Lab 02. (For what `doctor` reports right now, with
+no project at all, see [Checkpoint](#-checkpoint) below.)
+
+Inside an initialised agent project:
 
 ```bash
 azd ai agent doctor
@@ -330,34 +335,71 @@ variable rather than moving the whole project.
 
 ## ✅ Checkpoint
 
-You should now be able to run this and see this inside any initialised agent project:
+Lab 01 creates **no Azure resources and no project**, so the thing to verify here is the
+toolchain, not an agent. Three commands:
 
 ```bash
-azd ai agent doctor
+azd version                        # ≥ 1.27.1
+azd extension list --installed     # five extensions, all "Up to date"
+az account show                    # signed in, correct subscription
 ```
+
+Then confirm `doctor` itself is reachable. Run it from a directory with no project in it —
+which is where you are at the end of this lab:
+
+```bash
+azd ai agent doctor --local-only
+```
+
+<details open>
+<summary>✅ Verified output — captured 2026-08-12, outside any project</summary>
 
 ```text
+azd ai agent doctor
+
 Local
    (✓) azd extension reachable
-   (✓) azure.yaml present and parseable
-   (✓) azd environment selected
-   (✓) agent service in azure.yaml
-   (✓) FOUNDRY_PROJECT_ENDPOINT set
-   (✓) agent definition valid (per service)
-   (✓) manual env vars set
-   (-) Manifest toolboxes have endpoint env vars set -- skipped
+   (x) azure.yaml present and parseable
+       Failed to get project config: rpc error: code = Unknown desc = no project exists; to create a new project, run `azd init`
+       fix: Run from a directory containing `azure.yaml`, or initialize one with `azd init`.
+   (-) azd environment selected -- skipped (azure.yaml check failed)
+   (-) agent service in azure.yaml -- skipped (azure.yaml check failed)
+   (-) FOUNDRY_PROJECT_ENDPOINT set -- skipped (environment check failed or skipped)
+   (-) agent definition valid (per service) -- skipped (no agent services detected or upstream check blocked)
+   (-) manual env vars set -- skipped (agent definition check failed or skipped)
+   (-) Manifest toolboxes have endpoint env vars set -- skipped (no azd environment is selected (see check `local.environment-selected`).)
 
 Authentication
-   (✓) authentication
+   (-) authentication -- skipped (remote check excluded by --local-only)
 
 Remote
-   (✓) Foundry project endpoint reachable
-   (✓) Developer has required role on Foundry project
-   (✓) Hosted agents are active
-   (-) Manifest connections exist on Foundry project -- skipped
+   (-) Foundry project endpoint reachable -- skipped (remote check excluded by --local-only)
+   (-) Developer has required role on Foundry project -- skipped (remote check excluded by --local-only)
+   (-) Hosted agents are active -- skipped (remote check excluded by --local-only)
+   (-) Manifest connections exist on Foundry project -- skipped (remote check excluded by --local-only)
 
-11 passed, 0 failed, 2 skipped
+1 passed, 1 failed, 11 skipped
+
+To fix, run these commands in order:
+
+  1. azd ai agent init  -- scaffold or refresh the agent project
 ```
+</details>
+
+> [!IMPORTANT]
+> **`1 passed, 1 failed, 11 skipped` is the correct result here — this lab does not end
+> all-green.** The one failure is the absence of a project, and you have not created one yet;
+> `azd ai agent init` in [Lab 02](02-first-agent.md) is what clears it. Note the cascade again:
+> 11 skips from **one** real problem.
+>
+> `doctor` only reaches all-green once an agent is deployed, which is the end of
+> [Lab 03](03-deploy.md#4-doctor--check-local-and-remote-state). If you want it green now,
+> nothing is wrong with your machine — you are simply two labs early.
+
+> [!TIP]
+> The CLI contradicts itself in that output: the error body says to run `azd init`, while the
+> `fix:` line says `azd ai agent init`. **Follow the `fix:` line.** A bare `azd init` scaffolds
+> an `azd` project with no agent service in it, and `doctor` will still fail on the next check.
 
 If you see something else, jump to *If that didn't work* below.
 
@@ -369,6 +411,8 @@ If you see something else, jump to *If that didn't work* below.
 | `azd ai agent` is not recognized | The extension is not installed or not reachable. | Run `azd extension install azure.ai.agents`. |
 | Auth checks fail | `az login` or `azd auth login` is missing, or the wrong subscription is selected. | Run both sign-ins and `az account set --subscription <id>`. |
 | `doctor` exits `2` | Every check was skipped. | Run it inside an initialized project after Lab 02 has provisioned resources. |
+| `1 passed, 1 failed, 11 skipped` | **Nothing is wrong.** You are not inside an agent project yet. | Expected at the end of this lab. `azd ai agent init` in [Lab 02](02-first-agent.md) clears it. |
+| `doctor` is not all-green | Also expected. It cannot be until an agent is deployed. | Continue to [Lab 02](02-first-agent.md); all-green arrives in [Lab 03](03-deploy.md#4-doctor--check-local-and-remote-state). |
 
 Everything else: [troubleshooting](../reference/troubleshooting.md).
 

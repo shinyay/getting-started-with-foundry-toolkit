@@ -120,6 +120,24 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Lab 01's checkpoint demanded a state Lab 01 cannot reach.** It required
+  `11 passed, 0 failed, 2 skipped` — all green, including `(✓) FOUNDRY_PROJECT_ENDPOINT set`
+  and three passing *Remote* checks — from a lab whose own header says
+  *"$0 · Creates 0 Azure resources"*, and whose §7 explicitly teaches the opposite fifty lines
+  earlier: *"A red `(x)` before you provision is correct. `FOUNDRY_PROJECT_ENDPOINT` cannot
+  exist yet."* The page contradicted itself, and the checkpoint is this repo's pass/fail gate —
+  a reader who did everything correctly saw a mismatch and was sent to *If that didn't work*,
+  where nothing could help because nothing was wrong. All-green is the end state of **Lab 03**,
+  two labs later. The block has been moved there, to the `doctor` step where it is first
+  achievable; Lab 01's checkpoint now verifies what Lab 01 actually produces — the toolchain,
+  both sign-ins, and `doctor` being reachable at all. Found by walking the tutorial by hand,
+  not by CI: check 4 verifies that a checkpoint *exists*, not that it is *reachable*.
+- **A fourth `doctor` state is now documented.** Running it outside any project — where every
+  reader stands the moment they finish Lab 01 — reports `1 passed, 1 failed, 11 skipped`, and
+  none of the three previously documented states matched it. Captured verbatim and made Lab 01's
+  checkpoint, with the cascade spelled out: eleven skips from one real problem. Also noted that
+  the CLI contradicts itself in that output — the error body says `azd init`, the `fix:` line
+  says `azd ai agent init`, and only the latter produces a project with an agent service.
 - **The repo's last uncaptured tutorial block is now verbatim — and the inference in it was
   wrong.** [Lab 02](docs/tutorial/02-first-agent.md) honestly flagged its `invoke --local`
   output as *"❌ not captured verbatim"*, having derived the shape from the remote invoke on

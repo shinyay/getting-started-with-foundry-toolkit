@@ -179,10 +179,41 @@ azd ai agent doctor
 ```
 
 Checks local config, authentication *and* remote state: endpoint reachability, your RBAC role,
-and whether hosted agents are enabled. Run it first whenever anything is odd. Full green output
-is in [Lab 01](01-setup.md#-checkpoint) — the block in
-[§7](01-setup.md#7-verify-everything) is the `--local-only` run, which is *meant* to show one
-failure before you provision.
+and whether hosted agents are enabled. Run it first whenever anything is odd.
+
+**This is the first point in the tutorial where `doctor` can go all-green.** Every earlier run
+has a legitimate `(x)` in it: no project until [Lab 02](02-first-agent.md)'s `init`, and no
+`FOUNDRY_PROJECT_ENDPOINT` until its `provision`.
+
+<details open>
+<summary>✅ Verified output — all green, after deploy</summary>
+
+```text
+Local
+   (✓) azd extension reachable
+   (✓) azure.yaml present and parseable
+   (✓) azd environment selected
+   (✓) agent service in azure.yaml
+   (✓) FOUNDRY_PROJECT_ENDPOINT set
+   (✓) agent definition valid (per service)
+   (✓) manual env vars set
+   (-) Manifest toolboxes have endpoint env vars set -- skipped
+
+Authentication
+   (✓) authentication
+
+Remote
+   (✓) Foundry project endpoint reachable
+   (✓) Developer has required role on Foundry project
+   (✓) Hosted agents are active
+   (-) Manifest connections exist on Foundry project -- skipped
+
+11 passed, 0 failed, 2 skipped
+```
+</details>
+
+The two remaining skips are not failures — this sample declares no toolboxes and no
+connections, so there is nothing to check. **A skip means "not applicable", never "broken".**
 
 > [!TIP]
 > **`10 passed, 0 failed, 3 skipped` is usually a flake, not a problem.** The remote
