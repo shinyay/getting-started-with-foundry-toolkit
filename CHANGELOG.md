@@ -120,6 +120,42 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Walking Lab 01 on a second machine found eight more defects.** A reader ran every step and
+  pasted real output; each divergence from the page is fixed below.
+  - **`az account show --query "{sub:name, id:id, user:user.name}" -o table` never printed the
+    ID it asked for.** Azure CLI's table renderer drops an `id` column silently — the same
+    query with `-o json` returns it. The very next instruction was
+    `az account set --subscription <subscription-id>`, and Lab 02 § 3 asks for the same value,
+    so the tutorial demanded an ID it gave the reader no way to obtain. Now shows
+    `az account show --query id -o tsv` as its own step, with the trap documented.
+  - **The Checkpoint told the reader to run bare `az account show`,** which prints tenant ID,
+    subscription ID, tenant display name and tenant domain. A checkpoint is precisely the
+    output people paste into issues when asking for help — and this repo's own issue forms ask
+    for command output. Narrowed to `--query "{sub:name, user:user.name}"`, with a CAUTION.
+    Lab 01 § 4 was already using a narrowed query, so the page disagreed with itself.
+  - **The `azd extension upgrade --all` block matched neither a terminal nor a log file.** It
+    omitted the two-line command banner that always appears, and printed one
+    `Upgrading <extension>` line per extension — but a terminal shows none of them (`azd`
+    rewrites that line in place) and a redirect shows two of each. The block had been
+    hand-trimmed from a redirected capture into a form that exists nowhere. Replaced with what
+    a terminal shows, plus a note explaining why CI logs look different.
+  - **`azd extension list --installed` was missing its `SOURCE` column and separator rule.**
+  - **`azd version` output omitted the trailing `(stable)`** — the release channel, which is
+    the first thing worth knowing when someone reports odd behaviour.
+  - **The Checkpoint's `doctor` capture was one line short,** missing
+    `Then re-run \`azd ai agent doctor\` to verify.`
+  - **§ 8's new warning quoted the CLI's bad advice without correcting it.** The error says
+    *"to create a new project, run `azd init`"*; that is the wrong command, and the correction
+    lived only in the Checkpoint TIP — *after* § 8. A reader going in order met the misleading
+    advice first.
+  - **Nothing said which shell the command blocks assume.** They assume `bash`/`zsh`, and
+    `fish` breaks on `echo $?` (used in Lab 09) and on `VAR=value azd …` (used in
+    `reference/`). Both substitutions, plus the `code` → `code-insiders` swap for VS Code
+    Insiders, are now stated once in § 1.
+- **Confirmed unchanged, on a second machine, 2026-08-12:** all five extension versions, the
+  `ms-windows-ai-studio.windows-ai-studio` marketplace ID (HTTP 200) and the 404 on the ID the
+  official docs link to, `azd env set` refusing outside a project with exit `1`, and the
+  Checkpoint's `1 passed, 1 failed, 11 skipped`.
 - **Labs 01 and 02 contained four more commands or blocks that cannot be run where they are
   printed.** The `11/0/2` checkpoint fixed below was not an isolated slip but one instance of
   a pattern, so both pages were audited line by line against a real machine:

@@ -37,6 +37,16 @@ sign-ins, and `azd ai agent doctor` running.
 Note that you do **not** need a local Python 3.13/3.14. `azd ai agent run` provisions its own
 interpreter via `uv` (observed: it downloaded CPython 3.14.3 automatically).
 
+> [!NOTE]
+> **Command blocks in these labs assume `bash` or `zsh`.** Two substitutions cover `fish`:
+>
+> | These labs write | In `fish` |
+> |---|---|
+> | `echo $?` | `echo $status` |
+> | `VAR=value azd …` | `env VAR=value azd …` |
+>
+> If you run **VS Code Insiders**, `code` is `code-insiders` in every command below.
+
 ### 2. Install `azd`
 
 <details>
@@ -74,8 +84,11 @@ azd version
 ```
 
 ```text
-azd version 1.30.0 (commit …)
+azd version 1.30.0 (commit eea6db684821093daabd8bf357b6c9b636168abf) (stable)
 ```
+
+The trailing `(stable)` is the release channel. If yours says anything else you are on a
+pre-release build, which is worth knowing before you report odd behaviour.
 
 ### 3. Install the agent extension
 
@@ -92,18 +105,20 @@ azd extension upgrade --all
 ```
 
 <details>
-<summary>✅ Verified output — captured 2026-08-09, everything already current</summary>
+<summary>✅ Verified output — captured 2026-08-12, everything already current</summary>
 
 ```text
-Upgrading azure.ai.agents extension
+Upgrade azd extensions (azd extension upgrade)
+Upgrades the specified extensions on the local machine.
+
   (-) Skipped: Upgrading azure.ai.agents extension (No upgrade available)
-Upgrading azure.ai.connections extension
+
   (-) Skipped: Upgrading azure.ai.connections extension (No upgrade available)
-Upgrading azure.ai.inspector extension
+
   (-) Skipped: Upgrading azure.ai.inspector extension (No upgrade available)
-Upgrading azure.ai.projects extension
+
   (-) Skipped: Upgrading azure.ai.projects extension (No upgrade available)
-Upgrading azure.ai.toolboxes extension
+
   (-) Skipped: Upgrading azure.ai.toolboxes extension (No upgrade available)
 
   5 skipped
@@ -112,18 +127,25 @@ SUCCESS: Extensions upgraded successfully
 ```
 </details>
 
+> [!NOTE]
+> That is what a **terminal** shows. `azd` prints a live `Upgrading <extension>` line and
+> overwrites it in place with the result, so you never see it settle. Redirect the same command
+> to a file and those progress lines survive — twice each — because a file has no cursor to
+> rewind. Neither form is wrong; do not be surprised when CI logs look busier than your screen.
+
 > [!IMPORTANT]
 > ✅ **Verified: there are five extensions, not four.** `azure.ai.connections` is easy to miss
 > because nothing in the getting-started flow mentions it. Confirm yours with
 > `azd extension list --installed`:
 >
 > ```text
-> ID                     NAME                             STATUS       INSTALLED      LATEST
-> azure.ai.agents        Foundry agents (Beta)            Up to date   1.0.0-beta.9   1.0.0-beta.9
-> azure.ai.connections   Foundry Connections (Beta)       Up to date   1.0.0-beta.4   1.0.0-beta.4
-> azure.ai.inspector     Foundry Agent Inspector (Beta)   Up to date   1.0.0-beta.3   1.0.0-beta.3
-> azure.ai.projects      Foundry Projects (Beta)          Up to date   1.0.0-beta.5   1.0.0-beta.5
-> azure.ai.toolboxes     Foundry Toolboxes (Beta)         Up to date   1.0.0-beta.5   1.0.0-beta.5
+> ID                     NAME                             STATUS       INSTALLED      LATEST         SOURCE
+> ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+> azure.ai.agents        Foundry agents (Beta)            Up to date   1.0.0-beta.9   1.0.0-beta.9   azd
+> azure.ai.connections   Foundry Connections (Beta)       Up to date   1.0.0-beta.4   1.0.0-beta.4   azd
+> azure.ai.inspector     Foundry Agent Inspector (Beta)   Up to date   1.0.0-beta.3   1.0.0-beta.3   azd
+> azure.ai.projects      Foundry Projects (Beta)          Up to date   1.0.0-beta.5   1.0.0-beta.5   azd
+> azure.ai.toolboxes     Foundry Toolboxes (Beta)         Up to date   1.0.0-beta.5   1.0.0-beta.5   azd
 > ```
 
 Confirm what you actually have:
@@ -172,11 +194,32 @@ az login                      # used by DefaultAzureCredential at runtime
 azd auth login                # used by azd for provisioning/deploying
 ```
 
-Check:
+Already signed in? Check without re-authenticating:
 
 ```bash
-az account show --query "{sub:name, id:id, user:user.name}" -o table
+az account show --query "{sub:name, user:user.name}" -o table
+azd auth login --check-status
 ```
+
+```text
+Sub                                       User
+----------------------------------------  -------------------------
+MCAPS-…                                   you@example.com
+
+Logged in to Azure as you@example.com
+```
+
+Lab 02 asks for your **subscription ID**, and you need a separate command to get it:
+
+```bash
+az account show --query id -o tsv
+```
+
+> [!WARNING]
+> **`-o table` silently drops an `id` column.** Ask for `{sub:name, id:id, user:user.name}`
+> with `-o table` and the `Id` column simply is not rendered — the same query with `-o json`
+> returns it. Request the ID on its own line, as above, or you will go looking for a value the
+> previous command never printed.
 
 If you have several subscriptions, pin one:
 
@@ -289,7 +332,9 @@ variable rather than moving the whole project.
 > ERROR: no project exists; to create a new project, run `azd init`
 > ```
 >
-> ✅ Verified 2026-08-12 — exit code `1`, and nothing is written to disk.
+> ✅ Verified 2026-08-12 on two machines — exit code `1`, and nothing is written to disk.
+> **Ignore the CLI's advice to run `azd init`.** A bare `azd init` builds an `azd` project with
+> no agent service in it. Lab 02 uses `azd ai agent init`, which is a different command.
 
 ## ✅ Checkpoint
 
@@ -297,10 +342,16 @@ Lab 01 creates **no Azure resources and no project**, so the thing to verify her
 toolchain, not an agent. Three commands:
 
 ```bash
-azd version                        # ≥ 1.27.1
-azd extension list --installed     # five extensions, all "Up to date"
-az account show                    # signed in, correct subscription
+azd version                                              # ≥ 1.27.1
+azd extension list --installed                           # five extensions, all "Up to date"
+az account show --query "{sub:name, user:user.name}" -o table   # signed in, correct subscription
 ```
+
+> [!CAUTION]
+> **Do not paste bare `az account show` output into an issue, a PR or a chat.** It prints your
+> tenant ID, subscription ID, tenant display name and tenant domain. The `--query` above shows
+> what this checkpoint needs and nothing more. If you are asked for a subscription ID, send it
+> deliberately — never as a by-product of a status check.
 
 Then confirm `doctor` itself is reachable. Run it from a directory with no project in it —
 which is where you are at the end of this lab:
@@ -341,6 +392,8 @@ Remote
 To fix, run these commands in order:
 
   1. azd ai agent init  -- scaffold or refresh the agent project
+
+Then re-run `azd ai agent doctor` to verify.
 ```
 </details>
 
