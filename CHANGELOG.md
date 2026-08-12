@@ -48,6 +48,21 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   and `provision` do **not** exist, which is the mistake a reader arriving from `azd` core
   is most likely to make.
 
+### Security
+
+- **History rewritten to drop an absolute capture path.** `d13d2b6` shortened
+  `/home/<user>/.copilot/session-state/<uuid>/files/rdcheck/infra` to `<work-dir>` in
+  [infrastructure](docs/reference/infrastructure.md), but only at the tip — the original
+  string survived in the parent commit, so publishing the repository would have republished
+  exactly what that commit set out to remove. Rewritten with `git filter-repo` before going
+  public, which is the last moment it is cheap: after the first fork or clone it is
+  permanent. The tree is byte-identical (`48cde55…` before and after) — **only history
+  changed**. Nothing else in any of the 12 commits needed removing: a scan of all 239 blobs
+  found no credentials, tokens, private keys or personal email addresses.
+- **Commit SHAs from `12fdc05` onward changed.** The links in *How this repo got here* below
+  were repaired. Any clone taken before this must be re-cloned; `git pull` will not
+  reconcile.
+
 ### Verified
 
 - **Toolchain re-checked 2026-08-12.** `azd` 1.30.0 and all five extensions still report
@@ -196,8 +211,8 @@ Structure that isn't enforced decays, so nine checks run on every push:
 | Phase | Commits | What happened |
 |---|---|---|
 | **1 · Build** | [`54c439a`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/54c439a) | Research the upstream toolkit and the VS Code docs, then write the first complete guide, reference set and sample ladders. |
-| **1 · Review** | [`c612262`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/c612262), [`88dda95`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/88dda95) | Rubber-duck review for correctness, depth and clarity; remediate 69 findings; re-audit the audit and validate the Python path live. |
-| **2 · Restructure** | [`0178dc2`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/0178dc2) | Split into the three modes, add four live-verified labs, add CI checks 5–7, and replace every fabricated block found by two audit rounds. |
-| **3 · Refine** | [`ce70009`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/ce70009) | Add active recall to the learn layer, split the oversized multi-agent page, add the cheatsheet and FAQ, and add CI checks 8–9. |
+| **1 · Review** | [`c612262`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/c612262), [`12fdc05`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/12fdc05) | Rubber-duck review for correctness, depth and clarity; remediate 69 findings; re-audit the audit and validate the Python path live. |
+| **2 · Restructure** | [`3ee8aad`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/3ee8aad) | Split into the three modes, add four live-verified labs, add CI checks 5–7, and replace every fabricated block found by two audit rounds. |
+| **3 · Refine** | [`c107a4f`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/c107a4f) | Add active recall to the learn layer, split the oversized multi-agent page, add the cheatsheet and FAQ, and add CI checks 8–9. |
 
 [2026.08.0]: https://github.com/shinyay/getting-started-with-foundry-toolkit/releases/tag/v2026.08.0
