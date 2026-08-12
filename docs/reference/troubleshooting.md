@@ -260,6 +260,22 @@ ERROR: failed to get auth token: AzureDeveloperCLICredential: signal: killed.
 `eval show`. It is a **transient token-acquisition failure**, not a configuration problem — the
 subprocess that fetches the token is killed before it returns.
 
+✅ **Also seen inside `azd ai agent doctor` on 2026-08-12**, where it is more dangerous because
+it does not surface as an error:
+
+```text
+   (-) Hosted agents are active -- skipped (1 agent probe(s) did not complete: probe failed:
+       HTTP request failed: AzureDeveloperCLICredential: signal: killed. …)
+
+10 passed, 0 failed, 3 skipped
+```
+
+The probe failure is counted as a **skip**, not a failure, so `doctor` still exits `0` and the
+summary line looks merely incomplete rather than wrong. It hit two of three consecutive runs
+against an agent that `azd ai agent show` reported as `Status active`. If you see
+`10 passed, 0 failed, 3 skipped` where you expected `11 passed, 0 failed, 2 skipped`, re-run
+before investigating.
+
 **Fix:** re-run the command. It cleared on retry every time. If it repeats, prime the cache
 first:
 
@@ -308,6 +324,24 @@ Creating virtual environment at: .venv
 ```
 
 A local 3.12 is fine.
+
+### Related: the hosted runtime is a different Python from the local one
+
+The interpreter `uv` fetches for `azd ai agent run` is **not** the one your deployed agent runs
+on. Verified 2026-08-12: the local venv reported `Using CPython 3.14.3` while the same code,
+once deployed, reported a 3.13 runtime:
+
+```bash
+azd ai agent show --output json | jq -r '.definition.code_configuration.runtime'
+```
+
+```text
+python_3_13
+```
+
+So "works locally" does not prove "works hosted" — 3.14-only syntax, or a dependency with no
+3.13 wheel, fails only after `azd deploy`. This is a reason to deploy early
+([Lab 03](../tutorial/03-deploy.md)) rather than polishing locally first.
 
 ### Related: two virtual environments
 

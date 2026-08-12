@@ -97,6 +97,19 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Verified
 
+- **Labs 01–03 re-run end-to-end on live Azure, 2026-08-12.** Provision → run → local invoke →
+  deploy → show → remote invoke → doctor → `down --purge`, then torn down; teardown confirmed
+  independently with `az group exists` and `az cognitiveservices account list-deleted` rather
+  than trusting `azd`'s exit code. Timings are in the
+  [Verified runs table](docs/reference/README.md#verified-runs). Unlike the 2026-08-08/09 runs
+  this one followed the *tutorial as written* — the catalog sample — instead of this
+  repository's own samples, which is what exposed the drifts below. **Labs 04–10 were not
+  re-run.**
+- **Reproduced field-for-field:** the `doctor` 13-point diagnostic (11 passed / 0 failed /
+  2 skipped) and its `--local-only` variant, all 17 fields of `azd ai agent show`, the eight-line
+  remote `invoke` header, the two-resource provision, the `--purge` teardown at 1m46s, the
+  `curl localhost:8088/` 404, the harmless `169.254.169.254` traceback, and the
+  `eval generate` required-flag error — the last matching the documented prose verbatim.
 - **Toolchain re-checked 2026-08-12.** `azd` 1.30.0 and all five extensions still report
   *Up to date*, so `v2026.08.0` remains accurate — no re-cut needed.
 - **A second exit-code false positive.** `azd ai agent sample show --help` exits **0** and
@@ -107,6 +120,53 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **The repo's last uncaptured tutorial block is now verbatim — and the inference in it was
+  wrong.** [Lab 02](docs/tutorial/02-first-agent.md) honestly flagged its `invoke --local`
+  output as *"❌ not captured verbatim"*, having derived the shape from the remote invoke on
+  the assumption that both print an identical header. They do not. A real capture differs in
+  five ways: the first field is `Target:` (host and port) not `Agent:`; `Session:` appears once
+  as a plain UUID rather than twice; `Conversation:` is unprefixed, not `conv_…`; the reply is
+  prefixed `[local]`, not the agent name — the local server logs `agent_name=(not set)` even
+  though `azure.yaml` sets `name:` — and **there is no `Trace ID:` line at all**, which is the
+  one field a reader would most likely go looking for. Replaced with the capture and promoted
+  to ✅ verified. This is the case for rule 1: the block was labelled as an inference, the
+  inference was reasonable, and it was still wrong in every detail that mattered.
+- **Lab 02's directory tree was missing a level, and it is the level that breaks the lab.**
+  `azd ai agent init` creates `my-agent/agent-framework-agent-basic-responses/` and puts
+  `azure.yaml`, `.azure/`, `src/` — and its own `git init` — inside *that*, not in `my-agent/`.
+  The verified `init` output had elided the destination path to
+  `…/agent-framework-agent-basic-responses`, so the diagram and the capture never visibly
+  contradicted each other. A reader who follows the page literally then runs `azd env set` one
+  directory too high and is told no project exists.
+- **Labs 03 and 06 showed an agent name the reader cannot produce.** Their captures came from
+  this repo's `samples/python/01-hello-world` (`name: hello-world`), but Lab 02 initialises the
+  *catalog* sample and `init` never renames it — so every "verified" block on those two pages
+  named something a reader following the tutorial would never see. The captures are real, so
+  they have **not** been edited; both pages now state their provenance and the single
+  substitution to make. Labs 07 and 08 were already consistent.
+- **`azd deploy` injects five env vars, not two.** Lab 03 listed only `_NAME` and `_VERSION`;
+  it also writes `_ENDPOINT`, `_PROJECT_ENDPOINT` and `_RESPONSES_ENDPOINT`. Not cosmetic —
+  `azd ai agent eval` resolves its target from these and names the variable it read.
+- **Lab 03 claimed `show` cannot emit JSON.** The note told readers to check `--help` for
+  "the output flags your installed version supports", while the same page's troubleshooting
+  table already instructed `azd ai agent show --output json`, and
+  [`evidence/help/show.txt`](evidence/help/show.txt) has documented `-o, --output` with a
+  worked JSON example all along. Verified working. The note was written without checking the
+  evidence file that exists precisely to prevent this — rule 1 cuts both ways: do not invent
+  output, and do not under-claim against a capture you already hold.
+- **Lab 03 pointed at the wrong half of Lab 01 for "full green output".** The anchor resolved
+  to §7, which deliberately shows a *failing* `--local-only` run; the genuine
+  11 passed / 0 failed / 2 skipped block is in Lab 01's checkpoint. CI check 9 could not catch
+  this — the anchor was real, just wrong.
+- **"Provision writes ~15 variables"** — it was 24 in this run. Replaced the estimate with the
+  measured count.
+- **Two new failure modes documented in [troubleshooting](docs/reference/troubleshooting.md).**
+  §7d gains the `doctor` case: the *"Hosted agents are active"* probe can fail its token
+  acquisition and is then counted as **skipped**, not failed, so `doctor` still exits `0` and
+  reports `10 passed, 0 failed, 3 skipped` for a perfectly healthy agent — hit on two of three
+  consecutive runs. §10 gains the local-vs-hosted Python gap: `uv` fetched CPython 3.14.3
+  locally while the deployed agent reported `python_3_13`, so "works locally" does not prove
+  "works hosted".
 - **Removed the agent's local capture directory from two "verified" logs.** The Bicep and
   Terraform ejection excerpts in [infrastructure](docs/reference/infrastructure.md) carried
   an absolute session-state path. It was genuine `azd` output, not a fabrication, but it is

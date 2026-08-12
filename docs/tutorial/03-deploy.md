@@ -4,6 +4,15 @@
 
 Deploy the local agent to Foundry, verify the hosted version, then destroy everything safely.
 
+> [!NOTE]
+> **Your agent will be called `agent-framework-agent-basic-responses`, not `hello-world`.**
+> The verified blocks on this page were captured from this repository's own
+> [`samples/python/01-hello-world`](../../samples/python/01-hello-world/), whose `azure.yaml`
+> sets `name: hello-world`. [Lab 02](02-first-agent.md) instead initialises the *catalog*
+> sample, which keeps its own name — and `init` never renames it. The commands, field names,
+> ordering and timings below are unaffected; only the agent name differs. Re-run the whole page
+> against the catalog sample and the name is the single substitution to make.
+
 ## What you'll learn
 
 - Deploy a hosted agent version to Foundry.
@@ -41,14 +50,19 @@ SUCCESS: Your application was deployed to Azure in 2 minutes 21 seconds.
 ```
 </details>
 
-Deploy also injects per-service env vars back into your environment:
+Deploy also injects **five** per-service env vars back into your environment:
 
 ```text
+AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_ENDPOINT
 AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_NAME
+AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_PROJECT_ENDPOINT
+AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_RESPONSES_ENDPOINT
 AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_VERSION
 ```
 
-(`AGENT_<SERVICE_NAME_UPPERCASED>_NAME` / `_VERSION`.)
+The pattern is `AGENT_<SERVICE_NAME_UPPERCASED>_<FIELD>`, with `-` replaced by `_`. These are
+not decoration: `azd ai agent eval` resolves the agent it is about to evaluate from `_NAME` and
+`_VERSION`, and reports which variable it read.
 
 ### 2. `show` — inspect what landed
 
@@ -82,9 +96,25 @@ Endpoint (responses)             https://cog-56mzb54ouruu6.services.ai.azure.com
 </details>
 
 > [!NOTE]
-> **`show` prints a table, not JSON.** If you were expecting a JSON document to pipe into `jq`,
-> check `azd ai agent show --help` for the output flags your installed version supports — this is
-> what ours printed.
+> **`show` defaults to a table, but JSON is available.** `-o json` is a documented flag
+> (`azd ai agent show --help` lists `-o, --output string  The output format (supported: json,
+> table) (default "table")`), and it returns the same record with machine-readable field names —
+> `instance_identity.principal_id`, `definition.environment_variables`, and so on. Use it
+> whenever you want to pipe into `jq`:
+>
+> ```bash
+> azd ai agent show --output json | jq -r '.instance_identity.principal_id'
+> ```
+>
+> The JSON also carries the deploy defaults the table omits: `cpu: "0.5"`, `memory: "1Gi"`,
+> `dependency_resolution: "remote_build"`, `runtime: "python_3_13"` and the negotiated
+> `protocol_versions`.
+
+> [!IMPORTANT]
+> **The hosted runtime is not the interpreter you ran locally.** The deployed agent reports a
+> different Python from the one `uv` fetched for `azd ai agent run`, so code that passes locally
+> can still fail in the cloud. Details and the check command:
+> [troubleshooting §10](../reference/troubleshooting.md#related-the-hosted-runtime-is-a-different-python-from-the-local-one).
 
 Four things this proves:
 
@@ -150,7 +180,15 @@ azd ai agent doctor
 
 Checks local config, authentication *and* remote state: endpoint reachability, your RBAC role,
 and whether hosted agents are enabled. Run it first whenever anything is odd. Full green output
-is in [Lab 01](01-setup.md#7-verify-everything).
+is in [Lab 01](01-setup.md#-checkpoint) — the block in
+[§7](01-setup.md#7-verify-everything) is the `--local-only` run, which is *meant* to show one
+failure before you provision.
+
+> [!TIP]
+> **`10 passed, 0 failed, 3 skipped` is usually a flake, not a problem.** The remote
+> *"Hosted agents are active"* probe intermittently fails to get a token and is then counted as
+> **skipped** rather than failed, so `doctor` still exits `0`. Re-run before investigating:
+> [troubleshooting §7d](../reference/troubleshooting.md#7d-azuredeveloperclicredential-signal-killed).
 
 Exit codes:
 

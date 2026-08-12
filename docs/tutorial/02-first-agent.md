@@ -105,17 +105,28 @@ Adopted the sample's azure.yaml as the project manifest at azure.yaml.
 
 ```text
 my-agent/
-├── azure.yaml                    ← the contract; read this first
-├── AGENTS.md  CLAUDE.md  README.md
-├── .azure/                       ← azd environment state (gitignored)
-└── src/agent-framework-agent-basic-responses/
-    ├── main.py
-    ├── requirements.txt
-    ├── Dockerfile                ← only used in container mode
-    ├── .env.example
-    ├── .azdignore  .dockerignore
-    └── .venv/                    ← created later by `run`
+└── agent-framework-agent-basic-responses/   ← init makes its own folder here
+    ├── azure.yaml                ← the contract; read this first
+    ├── AGENTS.md  CLAUDE.md  README.md
+    ├── .gitignore
+    ├── .git/                     ← init runs `git init` here, not in my-agent/
+    ├── .azure/                   ← azd environment state (gitignored)
+    └── src/agent-framework-agent-basic-responses/
+        ├── main.py
+        ├── requirements.txt
+        ├── Dockerfile            ← only used in container mode
+        ├── .env.example
+        ├── .azdignore  .dockerignore
+        └── .venv/                ← created later by `run`
 ```
+
+> [!IMPORTANT]
+> **`init` nests a second folder named after the sample — `cd` into it before anything else.**
+> Creating `my-agent/` and running `init` inside it does *not* put `azure.yaml` in `my-agent/`;
+> it puts it in `my-agent/agent-framework-agent-basic-responses/`. Every later command
+> (`azd env set`, `azd provision`, `azd deploy`) must run from that inner folder, or azd reports
+> that no project exists. The `…/agent-framework-agent-basic-responses` path in the `init`
+> output above is the copy destination — that is the folder it means.
 
 > [!NOTE]
 > **`--agent-name` does not rename the scaffold.** When `-m` points at a sample's unified
@@ -182,7 +193,8 @@ cog-56mzb54ouruu6            ← Microsoft.CognitiveServices/accounts
 cog-56mzb54ouruu6/rdpy       ← …/accounts/projects
 ```
 
-Provision writes ~15 variables back into your environment. The one that matters:
+Provision writes the Foundry coordinates back into your environment — `azd env get-values`
+printed **24** values after this step. The one that matters:
 
 ```bash
 azd env get-values | grep FOUNDRY_PROJECT_ENDPOINT
@@ -262,54 +274,62 @@ azd ai agent invoke --local "In one short sentence, what is Microsoft Foundry?"
 ```
 
 <details open>
-<summary>Expected shape — ⚠️ not captured verbatim</summary>
+<summary>✅ Verified output — captured 2026-08-12</summary>
 
 ```text
-Agent:        hello-world (local)
+Target:       localhost:8088 (local)
 Message:      "In one short sentence, what is Microsoft Foundry?"
-Session:      (new -- server will assign)
-Conversation: conv_<server-assigned>
-Session:      <server-assigned>
-Trace ID:     <32 hex chars>
+Session:      a7fd3a20-87ab-4e78-ab64-6a5838792c1d
+Conversation: f6f160be-bc2f-4269-92e3-79546c7d02b6
 
-[hello-world] Microsoft Foundry is Microsoft's AI platform for building, customizing,
-and deploying AI apps and agents.
+[local] Microsoft Foundry is Microsoft’s platform for building, customizing, and deploying AI applications and agents using foundation models.
 
-Server responded in <n>s (first byte: <n>s)
+Server responded in 9.518s (first byte: 9.517s)
 ```
 </details>
 
-> [!NOTE]
-> ❌ **We did not capture a `--local` invoke transcript**, so unlike most blocks in this repo the
-> text above is the *shape* rather than a verbatim recording — the session IDs, trace ID and
-> timing are placeholders. The field list is taken from the real **remote** invoke we did capture
-> (below), which prints the identical header. If your local run differs structurally, trust your
-> terminal, not this page.
+> [!IMPORTANT]
+> **Local invoke does not print the same header as remote invoke.** Compare the block above with
+> the [remote invoke in Lab 03](03-deploy.md#3-invoke--call-the-deployed-agent) and four fields
+> differ:
+>
+> | | `--local` | remote |
+> |---|---|---|
+> | First field | `Target:` — host and port | `Agent:` — the agent name |
+> | `Session:` | once, a plain UUID | twice: `(new -- server will assign)`, then the server's ID |
+> | `Conversation:` | a plain UUID | prefixed `conv_…` |
+> | `Trace ID:` | **absent** | present |
+> | Reply prefix | literally `[local]` | `[<agent-name>]` |
+>
+> The prefix is `[local]`, not your agent's name, because the local server never receives one —
+> its startup log reads `agent_name=(not set)` even though `azure.yaml` sets `name:`.
+> **No `Trace ID` means nothing to paste into the portal**, which is the practical reason to
+> deploy before you start debugging traces.
 
 > `curl http://localhost:8088/` returns **404** — that is correct. There is no root route;
 > the protocol lives under the Responses API paths. Use `invoke` or the Inspector.
 
 ## ✅ Checkpoint
 
-You should now be able to run this in the second terminal and see this shape:
+You should now be able to run this in the second terminal and see this:
 
 ```bash
 azd ai agent invoke --local "In one short sentence, what is Microsoft Foundry?"
 ```
 
 ```text
-Agent:        hello-world (local)
+Target:       localhost:8088 (local)
 Message:      "In one short sentence, what is Microsoft Foundry?"
-Session:      (new -- server will assign)
-Conversation: conv_<server-assigned>
-Session:      <server-assigned>
-Trace ID:     <32 hex chars>
+Session:      a7fd3a20-87ab-4e78-ab64-6a5838792c1d
+Conversation: f6f160be-bc2f-4269-92e3-79546c7d02b6
 
-[hello-world] Microsoft Foundry is Microsoft's AI platform for building, customizing,
-and deploying AI apps and agents.
+[local] Microsoft Foundry is Microsoft’s platform for building, customizing, and deploying AI applications and agents using foundation models.
 
-Server responded in <n>s (first byte: <n>s)
+Server responded in 9.518s (first byte: 9.517s)
 ```
+
+The IDs, the wording of the answer and the timing will differ. The **field names, their order,
+the `[local]` prefix and the absence of a `Trace ID` line** should not.
 
 If you see something else, jump to *If that didn't work* below.
 

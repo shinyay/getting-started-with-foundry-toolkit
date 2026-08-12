@@ -8,6 +8,14 @@ Turn "it seems to work" into a number you can compare against.
 > are from that run, then torn down. Where it contradicted our earlier docs, this page follows
 > the run.
 
+> [!NOTE]
+> **Your agent will be called `agent-framework-agent-basic-responses`, not `hello-world`.**
+> Like [Lab 03](03-deploy.md), the captures on this page come from this repository's own
+> [`samples/python/01-hello-world`](../../samples/python/01-hello-world/), while
+> [Lab 02](02-first-agent.md) initialises the catalog sample and keeps its name. Commands and
+> field names are unaffected — substitute the agent name. Scores will differ on every run by
+> design; see the note on the rubric below.
+
 ## What you'll learn
 
 - That evaluation is **two commands with very different costs**, not one.

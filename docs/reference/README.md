@@ -78,17 +78,26 @@ Every number here came from a real run against live Azure, then destroyed. Nothi
 > rather than a total — `Dataset generation (8m 35s)` plus `Evaluator generation (16 seconds)`,
 > summed here as 8m51s.
 
-| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` |
-|---|---|---|---|
-| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** |
-| `azd provision` | **1m20s** | **1m43s** | **1m34s** |
-| `azd deploy` | **2m21s** | **3m1s** | **2m41s** |
-| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) |
-| `azd ai agent eval generate` | — | — | **8m51s** |
-| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed |
-| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** |
-| Resources created | **2** | **2** | **2** |
-| RG-scope role assignments | **0** | **0** | **0** |
+| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` | Python catalog `01-basic` |
+|---|---|---|---|---|
+| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** | **2026-08-12** |
+| `azd provision` | **1m20s** | **1m43s** | **1m34s** | **1m24s** |
+| `azd deploy` | **2m21s** | **3m1s** | **2m41s** | **2m3s** |
+| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) | **14.995s** (first byte 7.830s) |
+| First `invoke --local` | — | — | — | **9.518s** (first byte 9.517s) |
+| `azd ai agent eval generate` | — | — | **8m51s** | — |
+| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed | — |
+| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** | **1m46s** |
+| Resources created | **2** | **2** | **2** | **2** |
+| RG-scope role assignments | **0** | **0** | **0** | **0** |
+
+The 2026-08-12 column is a **reproducibility re-run** on a byte-identical toolchain (`azd 1.30.0`,
+all five extensions unchanged), following [Lab 02](../tutorial/02-first-agent.md) and
+[Lab 03](../tutorial/03-deploy.md) exactly as written rather than using this repository's own
+samples. Every timing landed within noise of the original, and `azd ai agent show`,
+`azd ai agent doctor` and `azd down` reproduced field-for-field. It also closed the repo's last
+uncaptured tutorial block — `invoke --local` — and corrected four claims; see the
+[changelog](../../CHANGELOG.md). Labs 04–10 were **not** re-run.
 
 Container mode was measured separately — it is the outlier:
 
