@@ -62,6 +62,30 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 - **Commit SHAs from `12fdc05` onward changed.** The links in *How this repo got here* below
   were repaired. Any clone taken before this must be re-cloned; `git pull` will not
   reconcile.
+- **The rewrite did not delete the old objects from GitHub, and going public exposed the
+  SHAs that address them.** A force-push abandons commits; it does not purge them. The
+  pre-rewrite commit is still served by the API to anyone who knows its SHA, and
+  `GET /repos/{owner}/{repo}/events` — readable without authentication on a public repo —
+  lists the `before`/`head` SHA of every push, so the abandoned commits are *enumerable*,
+  not merely guessable. Both facts were verified against the live API rather than assumed.
+  What remains exposed is one absolute path: a Linux username identical to the owner's
+  public GitHub handle, plus a session UUID meaningless outside the machine that made it —
+  strictly less identifying than the tenant and subscription IDs this repo publishes on
+  purpose. Two mitigations are in flight: GitHub's events endpoint
+  [retains only 30 days](https://docs.github.com/en/rest/activity/events), after which the
+  SHAs stop being enumerable, and a Support request to purge the unreachable objects has
+  been raised. Recorded here rather than quietly fixed, because the reasonable assumption —
+  *rewriting history removes the data* — is wrong, and anyone repeating this procedure will
+  make the same mistake.
+
+### Changed
+
+- **The repository is public.** A getting-started guide nobody can open has no readers: the
+  `v2026.08.0` release notes and the README badges were owner-only. Publishing also turns on
+  `validations: required` in the two issue forms, which GitHub honours on public
+  repositories only — until today the forms looked strict but enforced nothing. Added 14
+  topics and set the homepage to the [tutorial index](docs/tutorial/README.md); Issue #2
+  proposed `docs/README.md`, which does not exist.
 
 ### Verified
 
