@@ -422,11 +422,24 @@ cog-iatj4r7bthn5a/agent-framework-agent-basic-resp  Microsoft.CognitiveServices/
 > `Type:type` is capitalised on purpose. Lowercase `type` is one of the two keys `-o table`
 > silently drops — see [Lab 01 § 4](01-setup.md#4-sign-in).
 
-The project name is **not** random here: `agent-framework-agent-basic-resp` is the service name
-`agent-framework-agent-basic-responses` cut to 32 characters. Do not generalise that into a
-rule — this repo's own [`01-hello-world`](../../samples/python/01-hello-world/) capture, using
-the same `infra: microsoft.foundry` provider, got the random name `rdpy` instead. Read your own
-output rather than predicting it.
+Three different naming rules are at work here, and knowing which is which saves you from
+comparing your output against this page character by character:
+
+| Thing | Rule | This run |
+|---|---|---|
+| Cognitive Services account | `cog-` + random | `cog-iatj4r7bthn5a` — **yours will differ** |
+| Foundry project | your **azd environment** name, cut to 32 characters | `agent-framework-agent-basic-resp` |
+| Resource group | `rg-` + your azd environment name | `rg-agent-framework-agent-basic-responses-dev-…` |
+
+The environment here is `agent-framework-agent-basic-responses-dev`, whose first 32 characters
+are `agent-framework-agent-basic-resp`. Verified by prediction: an environment named
+`lab03-verify` produces the project `lab03-verify` and the group `rg-lab03-verify`.
+
+> [!NOTE]
+> Some groups get an extra suffix — this run's was `rg-…-dev-b02cc1f1`, while `rg-lab03-verify`
+> got none. The suffix is stable across `provision`/`down`/`provision` of the same environment.
+> When it is added is not documented here because it has not been established.
+
 Provision writes the Foundry coordinates back into your environment — `azd env get-values`
 printed **24** values after this step. The one that matters:
 
@@ -687,7 +700,8 @@ If you see something else, jump to *If that didn't work* below.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `RuntimeError: Model deployment name is not configured.` | `azd provision` never sets `AZURE_AI_MODEL_DEPLOYMENT_NAME`. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
-| Large traceback mentioning `169.254.169.254` | `DefaultAzureCredential` probed Azure Instance Metadata Service on your laptop. | Ignore it if the agent continues and invoke works. |
+| Large traceback mentioning `169.254.169.254` at **startup** | The OpenTelemetry Azure-VM resource detector, not authentication. | Ignore it. |
+| Large traceback mentioning `169.254.169.254` on **first invoke** | `DefaultAzureCredential` probed for a managed identity that does not exist on a laptop. | Ignore it — the next log line shows it falling back to `AzureCliCredential`. |
 | `invoke --local` cannot connect | The server is not ready or is not running on port 8088. | Wait for `Running on http://0.0.0.0:8088`; check `--port` if you changed it. |
 | You looked for `azd ai agent logs` | That command does not exist. | Use `azd ai agent monitor` after deployment. |
 

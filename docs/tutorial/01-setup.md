@@ -281,13 +281,14 @@ command that fixes it.
 
 **It reads a project, and you do not have one yet.** `azd ai agent init` in
 [Lab 02](02-first-agent.md) creates the first one. So this section teaches you to *read*
-`doctor`; there are five states you will actually see, each in a different place:
+`doctor`; there are six states you will actually see, each in a different place:
 
 | Output | Where you can actually get it |
 |---|---|
 | `1 passed, 1 failed, 11 skipped` — outside any project | the [Checkpoint](#-checkpoint) at the end of this lab |
 | `4 passed, 1 failed, 8 skipped` — project, but no environment selected | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
 | `6 passed, 1 failed, 6 skipped` — scaffolded, before `provision` | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
+| `9 passed, 1 failed, 3 skipped` — endpoint set, project unreachable | [Lab 03 troubleshooting](03-deploy.md#-if-that-didnt-work) |
 | `10 passed, 1 failed, 2 skipped` — provisioned, before `deploy` | [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources) |
 | `11 passed, 0 failed, 2 skipped` — all green | [Lab 03 § 4](03-deploy.md#4-doctor--check-local-and-remote-state) |
 

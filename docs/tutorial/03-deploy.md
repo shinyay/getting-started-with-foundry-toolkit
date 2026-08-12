@@ -10,10 +10,19 @@ Deploy the local agent to Foundry, verify the hosted version, then destroy every
 > [`samples/python/01-hello-world`](../../samples/python/01-hello-world/), whose `azure.yaml`
 > sets `name: hello-world`. [Lab 02](02-first-agent.md) instead initialises the *catalog*
 > sample, which keeps its own name — and `init` never renames it. The commands, field names,
-> ordering and timings below are unaffected. **Three strings will differ** from what you see:
-> the agent name above, the Cognitive Services account (`cog-…` is random per run), and the
-> Foundry project — `rdpy` here, but `agent-framework-agent-basic-resp` in the Lab 02 run.
-> Both appear inside the Playground URL and the endpoint. Substitute your own.
+> ordering and timings below are unaffected. Substitute four strings, three of which come from
+> your **azd environment name** rather than from the sample:
+>
+> | On this page | Where yours comes from |
+> |---|---|
+> | agent `hello-world` | your `azure.yaml` service name |
+> | account `cog-56mzb54ouruu6` | random, new on every `provision` |
+> | project `rdpy` | your azd environment name, cut to 32 characters |
+> | group `rg-rdpy` | `rg-` + your azd environment name |
+>
+> That is why this page's project is a four-letter string and Lab 02's is 32 characters long:
+> the environment was named `rdpy` when this was captured. See
+> [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
 
 ## What you'll learn
 
@@ -31,26 +40,50 @@ azd deploy --no-prompt
 ```
 
 <details open>
-<summary>✅ Verified output — 2 min 21 s</summary>
+<summary>✅ Verified output — 2 min 4 s, captured through a pty 2026-08-12</summary>
 
 ```text
-  hello-world: Packaging (Packaging code)
-  hello-world: Publishing
-  ai-project: Done [4s]
-  hello-world: Deploying (Deploying hosted agent (code deploy)) [13s]
-  hello-world: Deploying (Creating agent) [13s]
-  hello-world: Deploying (Waiting for agent to become active) [47s]
-  hello-world: Deploying (Polling agent status (1/30)) [57s]
-  …
-  hello-world: Deploying (Registering agent environment variables) [2m21s]
-  hello-world: Done [2m21s]
+Deploying services (azd deploy)
 
-- Agent playground (portal): https://ai.azure.com/nextgen/r/…/build/agents/…?version=1
+
+  Service                                Status        Duration
+  ─────────────────────────────────────  ────────────  ──────────
+  ● ai-project                             Done          3s
+  ● agent-framework-agent-basic-responses  Done          2m4s
+- Agent playground (portal): https://ai.azure.com/nextgen/r/…,rg-…,,cog-…,…/build/agents/…/build?version=1
 - Agent endpoint (responses): https://cog-….services.ai.azure.com/api/projects/…/agents/…/endpoint/protocols/openai/responses?api-version=v1
+  For information on invoking the agent, see https://aka.ms/azd-agents-invoke
 
-SUCCESS: Your application was deployed to Azure in 2 minutes 21 seconds.
+Set up an evaluation suite to measure quality and impact in one step with azd ai agent eval generate
+
+Next:
+  azd ai agent show agent-framework-agent-basic-responses
+  verify it's running
+
+  azd ai agent invoke agent-framework-agent-basic-responses '<payload>'
+  test the deployment
+
+
+SUCCESS: Your application was deployed to Azure in 2 minutes 4 seconds.
+You can view the resources created under the resource group rg-… in Azure Portal:
+https://portal.azure.com/#@/resource/subscriptions/<your-subscription-id>/resourceGroups/rg-…/overview
 ```
 </details>
+
+> [!NOTE]
+> **That table is live — the `Duration` column counts up and the row is rewritten in place.**
+> Redirect the same command to a file and you get one line per step instead
+> (`hello-world: Deploying (Polling agent status (1/30)) [57s]` and so on). Neither form is
+> wrong; they are the same run rendered for different destinations. A failure renders in the
+> same table, with `✗` and `Failed`.
+
+> [!CAUTION]
+> **Three of those lines carry identifiers.** The playground URL embeds a tenant identifier
+> plus your group, account and project names; the final portal URL embeds your **subscription
+> ID**. They are elided above for that reason. Do not paste this block into an issue unedited.
+
+The `Next:` block, the `aka.ms` line and the `eval generate` suggestion only appear on a
+terminal. See [`AGENTS.md`](../../AGENTS.md) for why this page captures through a pty.
 
 Deploy also injects **five** per-service env vars back into your environment:
 
@@ -64,7 +97,24 @@ AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_VERSION
 
 The pattern is `AGENT_<SERVICE_NAME_UPPERCASED>_<FIELD>`, with `-` replaced by `_`. These are
 not decoration: `azd ai agent eval` resolves the agent it is about to evaluate from `_NAME` and
-`_VERSION`, and reports which variable it read.
+`_VERSION`, and **names the variable it read** — run it and it tells you, before doing anything
+else:
+
+<details open>
+<summary>✅ Verified output — the resolution header of <code>azd ai agent eval generate</code>, 2026-08-12</summary>
+
+```text
+Detected eval target:
+  (✓) Service:        agent-framework-agent-basic-responses (azure.yaml)
+  (✓) Agent:          agent-framework-agent-basic-responses (AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_NAME)
+  (✓) Version:        1 (AGENT_AGENT_FRAMEWORK_AGENT_BASIC_RESPONSES_VERSION)
+  (✓) Kind:           hosted (azure.yaml (inline))
+  (✓) Endpoint:       https://cog-….services.ai.azure.com/api/projects/… (FOUNDRY_PROJECT_ENDPOINT)
+```
+</details>
+
+The parenthesis after each value is its **source**, which makes this the fastest way to find
+out why a command is targeting the wrong agent.
 
 ### 2. `show` — inspect what landed
 
@@ -162,17 +212,44 @@ In practice, it lets you:
 It’s closely related to Azure AI and is aimed at helping teams move from prototypes to production.
 
 Server responded in 14.242s (first byte: 7.357s)
+
+Next:
+  azd ai agent show agent-framework-agent-basic-responses
+  confirm the deployed agent is healthy
+
+  azd ai agent monitor --follow
+  stream live logs from the agent
 ```
 </details>
 
-Note the **Trace ID** — remote invocations are traced automatically; paste it into the portal
-to see the span tree.
+Note the **Trace ID** — remote invocations are traced automatically. Paste it into the portal
+to see the span tree, or `grep` for it in the container's own logs: the same value appears
+there as `x-request-id` and `trace-id` on the request that served this call.
 
-Live logs:
+Live logs — **`--follow` is what streams**:
 
 ```bash
-azd ai agent monitor
+azd ai agent monitor --follow
 ```
+
+> [!WARNING]
+> **Bare `azd ai agent monitor` does not stream.** It fetches the last 50 lines
+> (`--tail`, default 50) and exits `0`. Measured: `timeout 25 … azd ai agent monitor` returned
+> after a few seconds with 53 lines. The CLI's own `Next:` block above recommends the
+> `--follow` form, and `--help` says so too: *"Use `--follow` to stream logs in real-time, or
+> omit it to fetch recent logs and exit."*
+
+> [!TIP]
+> **The container log is where local and cloud visibly differ.** On your laptop
+> [Lab 02 § 6](02-first-agent.md#6-run--the-local-loop) shows `DefaultAzureCredential` falling
+> back to `AzureCliCredential`. In the hosted agent the same code logs
+> `DefaultAzureCredential acquired a token from ManagedIdentityCredential` — the per-agent
+> identity from § 2 doing its job. See [identity model](../learn/07-identity-model.md).
+>
+> Two more things the log shows that nothing else does: the agent calls the *same* model
+> endpoint you called locally (`POST …/api/projects/…/openai/v1/responses → 200`), and a
+> harmless `WARNING … Content type 'usage' is not supported yet. This is usually safe to
+> ignore.`
 
 ### 4. `doctor` — check local and remote state
 
@@ -188,9 +265,11 @@ has a legitimate `(x)` in it: no project until [Lab 02](02-first-agent.md)'s `in
 `FOUNDRY_PROJECT_ENDPOINT` until its `provision`.
 
 <details open>
-<summary>✅ Verified output — all green, after deploy</summary>
+<summary>✅ Verified output — all green, after deploy, captured through a pty 2026-08-12</summary>
 
 ```text
+azd ai agent doctor
+
 Local
    (✓) azd extension reachable
    (✓) azure.yaml present and parseable
@@ -199,7 +278,7 @@ Local
    (✓) FOUNDRY_PROJECT_ENDPOINT set
    (✓) agent definition valid (per service)
    (✓) manual env vars set
-   (-) Manifest toolboxes have endpoint env vars set -- skipped
+   (-) Manifest toolboxes have endpoint env vars set -- skipped (no toolbox resources declared in any service's agent.manifest.yaml.)
 
 Authentication
    (✓) authentication
@@ -208,14 +287,34 @@ Remote
    (✓) Foundry project endpoint reachable
    (✓) Developer has required role on Foundry project
    (✓) Hosted agents are active
-   (-) Manifest connections exist on Foundry project -- skipped
+   (-) Manifest connections exist on Foundry project -- skipped (no connection resources declared in any service's agent.manifest.yaml.)
 
 11 passed, 0 failed, 2 skipped
+
+Next:
+  azd ai agent show agent-framework-agent-basic-responses
+  verify it's running
+
+  azd ai agent invoke agent-framework-agent-basic-responses '<payload>'
+  test the deployment
 ```
 </details>
 
-The two remaining skips are not failures — this sample declares no toolboxes and no
-connections, so there is nothing to check. **A skip means "not applicable", never "broken".**
+Each `(-)` states its own reason in the parenthesis, and here both say the same thing: this
+sample declares no toolboxes and no connections, so there is nothing to check.
+
+> [!WARNING]
+> **A skip does not always mean "not applicable".** It can also mean "could not be evaluated,
+> because something upstream failed" — and the parenthesis is how you tell the two apart. Break
+> the project endpoint and the same two checks skip with a very different reason:
+>
+> ```text
+> (-) Hosted agents are active -- skipped (Foundry endpoint did not respond (see check `remote.foundry-endpoint`).)
+> ```
+>
+> Note that it names the upstream check. Always read the reason, and fix the topmost `(x)`
+> first — see [Lab 01 § 7](01-setup.md#7-verify-everything), where one failure produces eleven
+> skips.
 
 > [!TIP]
 > **`10 passed, 0 failed, 3 skipped` is usually a flake, not a problem.** The remote
@@ -352,23 +451,33 @@ azd down --force --purge
 > can fail even though the resource group is gone.
 
 <details open>
-<summary>✅ Verified output — 1 min 46 s</summary>
+<summary>✅ Verified output — 2 min 4 s, captured through a pty 2026-08-12</summary>
 
 ```text
 Deleting all resources and deployed code on Azure (azd down)
 Local application code is not deleted when running 'azd down'.
 
-Listing Cognitive Services accounts in rg-rdpy...
-Deleting model deployment gpt-5.4-mini on cog-56mzb54ouruu6...
-Deleting resource group rg-rdpy...
-Deleting resource group rg-rdpy (this can take several minutes)
-…
-Purging soft-deleted Cognitive Services account cog-56mzb54ouruu6...
 
-SUCCESS: Your application was removed from Azure in 1 minute 46 seconds.
+SUCCESS: Your application was removed from Azure in 2 minutes 4 seconds.
 ```
 </details>
 
+> [!NOTE]
+> **That really is the whole output.** While it runs, `azd` rewrites a progress line in place
+> — `Listing Cognitive Services accounts in rg-…`, `Deleting model deployment …`,
+> `Purging soft-deleted Cognitive Services account …` — and none of it survives to the end.
+> Redirect the command to a file and you keep every one of those lines. Teardown timing varies
+> widely: 1 m 46 s, 2 m 4 s, 2 m 21 s and 2 m 40 s across four measured runs.
+
+Teardown is not finished because the command said `SUCCESS`. Verify it:
+
+```bash
+az group exists -n <your-resource-group>
+```
+
+```text
+false
+```
 
 ### 7. Command cheat sheet
 
@@ -406,14 +515,18 @@ azd down --force --purge
 Deleting all resources and deployed code on Azure (azd down)
 Local application code is not deleted when running 'azd down'.
 
-Listing Cognitive Services accounts in rg-rdpy...
-Deleting model deployment gpt-5.4-mini on cog-56mzb54ouruu6...
-Deleting resource group rg-rdpy...
-Deleting resource group rg-rdpy (this can take several minutes)
-…
-Purging soft-deleted Cognitive Services account cog-56mzb54ouruu6...
 
-SUCCESS: Your application was removed from Azure in 1 minute 46 seconds.
+SUCCESS: Your application was removed from Azure in 2 minutes 4 seconds.
+```
+
+Then confirm the group is actually gone — `SUCCESS` is the command's opinion, `false` is Azure's:
+
+```bash
+az group exists -n <your-resource-group>
+```
+
+```text
+false
 ```
 
 If you see something else, jump to *If that didn't work* below.
@@ -423,9 +536,32 @@ If you see something else, jump to *If that didn't work* below.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `show` does not show `status: active` | Deployment is still activating or failed. | Wait a minute, run `azd ai agent doctor`, then inspect deployment output. |
+| `deploy` fails with `RESPONSE 404 … "Project not found"` | The project exists in ARM but the Foundry data plane will not serve it. Ignore the error's own hint — the agent definition is fine. | See the box below. |
 | Remote invoke fails but local invoke worked | Cloud identity/config differs from your laptop. | Use `azd ai agent show --output json` and check `instance_identity` and env vars. |
 | You tried `azd ai agent logs` | That command does not exist. | Use `azd ai agent monitor`. |
+| `monitor` prints and exits instead of streaming | You omitted `--follow`. | `azd ai agent monitor --follow`. |
 | Re-provision fails with a name conflict after teardown | You ran `azd down` without `--purge`. | Purge the soft-deleted Cognitive Services account or wait for retention to expire. |
+
+> [!WARNING]
+> **`SUCCESS: Your application was provisioned` does not guarantee a usable project.** Observed
+> 2026-08-12: `azd provision` reported success twice, ARM reported `provisioningState:
+> Succeeded` for the account *and* the project, the model deployment existed and
+> `properties.endpoints["AI Foundry API"]` matched `FOUNDRY_PROJECT_ENDPOINT` exactly — and the
+> data plane still answered `404 NotFound / "Project not found"` for over thirty minutes.
+>
+> `doctor` diagnoses this correctly and is worth running first:
+>
+> ```text
+> (x) Foundry project endpoint reachable
+>     Foundry returned HTTP 404 (endpoint is wrong or the project no longer exists).
+>
+> 9 passed, 1 failed, 3 skipped
+> ```
+>
+> **But its suggested fix did not work here.** It offers `azd provision` to "create the missing
+> Foundry resources"; nothing was missing, and re-running it changed nothing. What did work was
+> `azd down --force --purge` followed by provisioning into a **new azd environment**. The cause
+> is not known, so do not read one into it.
 
 Everything else: [troubleshooting](../reference/troubleshooting.md).
 

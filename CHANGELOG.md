@@ -120,6 +120,73 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Walking Lab 03 on live Azure found eleven defects, and disproved a rule this repo had been
+  repeating.** The page said the Foundry project name was random, and [Lab 02](docs/tutorial/02-first-agent.md)
+  — corrected earlier in this same release — said it came from the *service* name. Both were
+  wrong. A prediction test settled it: provisioning into an environment called `lab03-verify`
+  produced the project `lab03-verify` and the group `rg-lab03-verify`, where the service was
+  still `agent-framework-agent-basic-responses`. **The project name is the azd environment name
+  cut to 32 characters, and the resource group is `rg-` plus that name; only the Cognitive
+  Services account is random.** The two earlier runs could not distinguish the hypotheses
+  because the service name and the environment name share their first 32 characters. It also
+  explains `rdpy`, which this repo had recorded as an unexplained random string for months: the
+  environment was named `rdpy`. Lab 03's opening NOTE now maps all four substitutions to their
+  sources, and Lab 02 § 5 carries the rule.
+- **`azd deploy` renders a live table; the page showed a redirect.** A terminal draws
+  `Service / Status / Duration` and rewrites the rows in place; the per-step lines the page
+  printed (`hello-world: Deploying (Polling agent status (1/30)) [57s]`) only exist in a
+  redirected capture. This also closes a question left open during the Lab 02 walk, where a
+  table format was observed but could not be attributed — it belongs to `azd deploy`. The
+  block now also carries the four things a terminal shows and the old capture had dropped: the
+  `aka.ms/azd-agents-invoke` line, an unsolicited `eval generate` suggestion, the `Next:` block,
+  and the portal URL printed after `SUCCESS`.
+- **`azd down`'s verified block listed lines that no terminal keeps.** `Listing Cognitive
+  Services accounts in …`, `Deleting model deployment …` and `Purging soft-deleted …` are
+  progress lines rewritten in place; a pty capture of the whole command is four lines long.
+  Both the § 6 block and the Checkpoint carried the redirect form. Both replaced, and the
+  Checkpoint now also verifies teardown with `az group exists`, because `SUCCESS` is the
+  command's opinion and `false` is Azure's. The single `1m46s` timing is replaced by the
+  measured range across four runs (1m46s – 2m40s).
+- **The tutorial contradicted itself about skipped checks, and the wrong side was in bold.**
+  Lab 03 § 4 asserted *"A skip means 'not applicable', never 'broken'"*, while
+  [Lab 01 § 7](docs/tutorial/01-setup.md) said, correctly, that skips cascade from failures.
+  Measured: with the project endpoint broken, two checks skip with the reason
+  `(Foundry endpoint did not respond (see check `remote.foundry-endpoint`).)` — naming the
+  upstream check. The parenthesis is how the two kinds of skip are told apart, and the page had
+  been **truncating it away** from both skip lines while paraphrasing its contents in prose.
+- **A sixth `doctor` state.** `9 passed, 1 failed, 3 skipped` — endpoint set, project
+  unreachable — is reachable by anyone who tears down and comes back. Added to Lab 01 § 7,
+  whose table listed five.
+- **`SUCCESS: Your application was provisioned` does not mean the project is usable.** Observed
+  2026-08-12: provision succeeded twice, ARM reported `Succeeded` for the account and the
+  project, the model deployment existed, and `properties.endpoints["AI Foundry API"]` matched
+  `FOUNDRY_PROJECT_ENDPOINT` exactly — yet the data plane answered `404 / "Project not found"`
+  for over half an hour, so `azd deploy` failed. `doctor` diagnoses it precisely; its suggested
+  fix (`azd provision`) does **not** work, because nothing is missing. Recovery was
+  `azd down --force --purge` into a new environment. Documented in Lab 03's troubleshooting
+  with the cause explicitly marked unknown.
+- **`azd ai agent monitor` was introduced as "Live logs" but does not stream.** Bare, it fetches
+  `--tail` (default 50) and exits `0` — measured at 53 lines, returning in seconds under a
+  `timeout 25`. `--help` says exactly this, and the CLI's own `Next:` block recommends
+  `--follow`. Corrected, with a troubleshooting row.
+- **Two claims that had no evidence behind them now have it.** § 1 asserted that
+  `azd ai agent eval` names the environment variable it resolved the agent from; it does, in a
+  `Detected eval target:` header that the page never showed, and that header is now a verified
+  block. § 3 said remote invocations are traced; the `Trace ID` it prints is the same value the
+  container log carries as `x-request-id` and `trace-id`, so it can be grepped and not only
+  pasted into the portal.
+- **The hosted agent is where the identity model becomes visible.** The container log shows
+  `DefaultAzureCredential acquired a token from ManagedIdentityCredential`, against the same
+  code that falls back to `AzureCliCredential` on a laptop in Lab 02 § 6. Added, along with the
+  benign `Content type 'usage' is not supported yet` warning and the fact that the hosted agent
+  calls the same model endpoint you called locally.
+- **Verified with no changes needed:** the five injected `AGENT_<SERVICE>_*` variables and their
+  exact names; `azd ai agent show`'s seventeen table fields, their order, and every field the
+  § 2 NOTE claims the JSON adds (`cpu`, `memory`, `dependency_resolution: remote_build`,
+  `runtime: python_3_13`, `protocol_versions: [{responses, 2.0.0}]`); `azd ai agent list` not
+  existing; the required-argument error from a bare `eval generate`; `11 passed, 0 failed,
+  2 skipped` and its exit code `0`; and the "13-point diagnostic" count.
+
 - **Walking Lab 02 on a second machine, against live Azure, found sixteen more defects.** Every
   step from `sample list` to teardown was run by hand and its real output compared with the
   page. Two classes dominated.

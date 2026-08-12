@@ -94,10 +94,25 @@ Every number here came from a real run against live Azure, then destroyed. Nothi
 The 2026-08-12 column is a **reproducibility re-run** on a byte-identical toolchain (`azd 1.30.0`,
 all five extensions unchanged), following [Lab 02](../tutorial/02-first-agent.md) and
 [Lab 03](../tutorial/03-deploy.md) exactly as written rather than using this repository's own
-samples. Every timing landed within noise of the original, and `azd ai agent show`,
-`azd ai agent doctor` and `azd down` reproduced field-for-field. It also closed the repo's last
+samples. Every timing landed within noise of the original. It also closed the repo's last
 uncaptured tutorial block — `invoke --local` — and corrected four claims; see the
 [changelog](../../CHANGELOG.md). Labs 04–10 were **not** re-run.
+
+> [!IMPORTANT]
+> **That re-run was captured through a redirect, and a redirect hides things.** A later
+> hands-on walk of both labs in an interactive terminal found that `azd deploy` draws a
+> rewritten table where a redirect emits per-step lines, that `azd down`'s progress lines never
+> survive to the end of a terminal session, and that `Next:` blocks are printed only to a tty.
+> The re-run above could not have caught any of that, because it compared a redirect against a
+> redirect. **Capture through a pty — `script -qec '<command>' /dev/null` — before promoting a
+> block to verified.**
+
+**Teardown timing is the one number you should not trust to a single run.** Provision and
+deploy have held within a few seconds across every run in this table; `azd down --force --purge`
+has been measured at **1m46s, 2m4s, 2m21s and 2m40s** — a 50% spread — because it waits on
+resource-group deletion and a Cognitive Services purge, neither of which is under `azd`'s
+control. Budget for three minutes, and confirm with `az group exists` rather than trusting the
+`SUCCESS` line.
 
 Container mode was measured separately — it is the outlier:
 
