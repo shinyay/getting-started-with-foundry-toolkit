@@ -51,7 +51,7 @@ body:
         This decides what the fix is. A ✅ block that stopped working is a regression to
         re-verify; an illustrative one was never executed and may just need adapting.
       options:
-        - "✅ Verified <date> — claimed to be captured from a real run"
+        - "✅ Verified YYYY-MM-DD — claimed to be captured from a real run"
         - "Illustrative — explicitly marked as never executed"
         - "Neither — the block carries no label"
         - "Not sure"
