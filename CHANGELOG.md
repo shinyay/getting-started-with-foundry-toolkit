@@ -120,6 +120,42 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Labs 01 and 02 contained four more commands or blocks that cannot be run where they are
+  printed.** The `11/0/2` checkpoint fixed below was not an isolated slip but one instance of
+  a pattern, so both pages were audited line by line against a real machine:
+  - **Lab 01 §7 showed `azd ai agent doctor`, but the output under it was captured with
+    `--local-only`** — five lines read `skipped (remote check excluded by --local-only)`.
+    A reader running the printed command gets a different result.
+  - **Lab 01 §7's `6 passed, 1 failed, 6 skipped` block needed a project Lab 01 never
+    creates.** Lab 01 contains no `azd ai agent init` — every mention of `init` on the page is
+    a forward reference. The block, and the "no environment selected" variant beside it, have
+    moved to a new **Lab 02 § 4**, placed between `env` and `provision` so it earns its keep:
+    it is the last free checkpoint before the first billable command. Lab 01 §7 keeps the
+    heading (it is linked from the glossary) and now teaches only how to *read* `doctor`.
+  - **Lab 01 §8 told the reader to run `azd env set`, which fails there.** Verified
+    2026-08-12: outside a project it exits `1` with `ERROR: no project exists`. `azd env set`
+    needs an environment, and the first one is created by `azd ai agent init` in Lab 02. The
+    section now carries the region/quota decision and defers the commands to Lab 02 § 3.
+  - **Lab 02 § 2 explained the mandatory `cd` in prose but never gave it as a command.** The
+    IMPORTANT callout said to `cd` into the nested folder; the next step went straight to
+    `azd env set`, which fails from the parent. `cd` is now a step, with `ls azure.yaml` to
+    confirm it worked.
+- **Lab 02 § 1's JSON block was an undisclosed excerpt.** It showed 4 of the 9 fields the CLI
+  actually returns and elided the `initCommand` URL to `…/01-basic/azure.yaml`, so the two
+  fields that matter most were invisible: `recommended`, which is how you identify the
+  starting sample, and the full ready-to-paste `initCommand`. Replaced with one complete
+  entry, verbatim. The `text` form is now shown too — it is the default, so it is what the
+  reader sees first, and the page previously described only the `json` shape.
+- **Lab 02 § 1 now warns that two samples are called `01-basic`.** `agent-framework/responses/`
+  and `agent-framework/invocations/` each ship one, with titles differing by a single word.
+  This lab depends on the *responses* variant; matching on `01-basic` alone is a coin flip,
+  and the invocations variant speaks a different wire protocol.
+- **Lab 02's flow diagram was numbered `① init … ⑩ down`, which matched neither the lab's own
+  section numbers nor its scope** — half those steps belong to Lab 03. It is now split into
+  two labelled subgraphs with the numbering removed.
+- **Lab 01's opening line promised the wrong outcome.** *"Go from a clean machine to
+  `azd ai agent doctor` reporting all green"* is not what Lab 01 does, and directly
+  contradicted the callout added below explaining that it cannot.
 - **Lab 01's checkpoint demanded a state Lab 01 cannot reach.** It required
   `11 passed, 0 failed, 2 skipped` — all green, including `(✓) FOUNDRY_PROJECT_ENDPOINT set`
   and three passing *Remote* checks — from a lab whose own header says

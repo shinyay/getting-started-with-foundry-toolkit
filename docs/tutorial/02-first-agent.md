@@ -9,16 +9,24 @@ Scaffold a hosted-agent sample, provision a Foundry project, and talk to the age
 - Pick a verified sample from the CLI catalog.
 - Initialize a project from a unified `azure.yaml`.
 - Set the environment values `azd provision` does not set for you.
+- Check the project with `doctor` *before* creating anything billable.
 - Run the local agent server and invoke it through `azd`.
 
 ```mermaid
 flowchart LR
-    A["① init"] --> B["② env"] --> C["③ provision"] --> D["④ run"] --> E["⑤ invoke --local"]
-    E --> F["⑥ deploy"] --> G["⑦ show"] --> H["⑧ invoke"] --> I["⑨ eval"] --> J["⑩ down"]
-    style C fill:#fff3cd
-    style F fill:#fff3cd
-    style J fill:#f8d7da
+    subgraph L2["Lab 02 — this lab"]
+        A["init"] --> B["env"] --> C["doctor"] --> D["provision"] --> E["run"] --> F["invoke --local"]
+    end
+    subgraph L3["Lab 03"]
+        G["deploy"] --> H["show"] --> I["invoke"] --> J["eval"] --> K["down"]
+    end
+    F --> G
+    style D fill:#fff3cd
+    style G fill:#fff3cd
+    style K fill:#f8d7da
 ```
+
+<sub>🟡 costs money · 🔴 destroys everything</sub>
 
 > Every verified command and output block in this lab came from a real Azure run on
 > 2026-08-08 with `azd 1.30.0` / `azure.ai.agents 1.0.0-beta.9`.
@@ -34,6 +42,30 @@ azd ai agent sample list --language python
 azd ai agent sample list --language dotnetCsharp
 ```
 
+Each sample prints as three lines. The entry this lab uses — note it is **not** the first one
+listed:
+
+<details open>
+<summary>✅ Verified output — captured 2026-08-12, 1 of 21 entries</summary>
+
+```text
+Sample: Basic agent (Responses, Agent Framework, Python)
+Description: A basic Agent Framework agent hosted by Foundry using the Responses protocol.
+Manifest: https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml
+```
+</details>
+
+> [!WARNING]
+> **Two different samples are called `01-basic`.** They differ only by protocol:
+>
+> | Title | Path | |
+> |---|---|---|
+> | Basic agent (**Responses**, Agent Framework, Python) | `agent-framework/responses/01-basic` | ✅ this lab |
+> | Basic agent (**Invocations**, Agent Framework, Python) | `agent-framework/invocations/01-basic` | ❌ different wire protocol |
+>
+> Match on the whole `Manifest:` URL, never on `01-basic` alone. Pick the invocations variant
+> and every output below will differ.
+
 > [!TIP]
 > `--language` takes the *short* form (`python`, `dotnetCsharp`).
 > `--runtime` elsewhere takes the *full* token (`python_3_13`). They are not interchangeable —
@@ -45,18 +77,32 @@ Machine-readable form, which is how you get the `manifestUrl` to feed into `init
 azd ai agent sample list --language python --output json
 ```
 
+`-o, --output` accepts **only `json` and `text`**, and defaults to `text` — the form above.
+One entry of the 21, verbatim:
+
 ```json
 {
-  "templates": [
-    {
-      "title": "Basic agent (Responses, Agent Framework, Python)",
-      "manifestUrl": "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml",
-      "featured": true,
-      "initCommand": "azd ai agent init -m \"…/01-basic/azure.yaml\""
-    }
-  ]
+  "title": "Basic agent (Responses, Agent Framework, Python)",
+  "description": "A basic Agent Framework agent hosted by Foundry using the Responses protocol.",
+  "languages": [
+    "python"
+  ],
+  "type": "azure.yaml",
+  "manifestUrl": "https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml",
+  "tags": [
+    "example",
+    "Responses Protocol",
+    "featured",
+    "recommended"
+  ],
+  "featured": true,
+  "recommended": true,
+  "initCommand": "azd ai agent init -m \"https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml\""
 }
 ```
+
+The JSON carries two fields the text form does not: **`recommended`**, which is how you tell
+the starting sample from the rest, and **`initCommand`**, a ready-to-paste command.
 
 Full catalog: [sample-catalog.md](../reference/sample-catalog.md).
 
@@ -128,6 +174,18 @@ my-agent/
 > that no project exists. The `…/agent-framework-agent-basic-responses` path in the `init`
 > output above is the copy destination — that is the folder it means.
 
+So the next command is not optional:
+
+```bash
+cd agent-framework-agent-basic-responses
+```
+
+Confirm you are in the right place before continuing — this must list `azure.yaml`:
+
+```bash
+ls azure.yaml
+```
+
 > [!NOTE]
 > **`--agent-name` does not rename the scaffold.** When `-m` points at a sample's unified
 > `azure.yaml`, that file is *adopted verbatim*, so the folder and service keep the sample's
@@ -156,7 +214,88 @@ azd env set AZURE_LOCATION eastus2
 Values land in `.azure/<env-name>/.env`. That file is **gitignored** and is where secrets
 belong — never in `azure.yaml`.
 
-### 4. `provision` — create Azure resources
+### 4. `doctor` — check before you spend money
+
+Everything so far was free. The next command creates billable Azure resources, so confirm the
+project is sound first. `--local-only` keeps it offline and fast.
+
+```bash
+azd ai agent doctor --local-only
+```
+
+<details open>
+<summary>✅ Verified output — captured 2026-08-09, before provisioning</summary>
+
+```text
+azd ai agent doctor
+
+Local
+   (✓) azd extension reachable
+   (✓) azure.yaml present and parseable
+   (✓) azd environment selected
+   (✓) agent service in azure.yaml
+   (x) FOUNDRY_PROJECT_ENDPOINT set
+       FOUNDRY_PROJECT_ENDPOINT is not set in the current azd environment
+       fix: Run `azd provision` to create the Foundry project, or `azd env set
+       FOUNDRY_PROJECT_ENDPOINT <https://...>` to point at an existing one.
+   (✓) agent definition valid (per service)
+   (✓) manual env vars set
+   (-) Manifest toolboxes have endpoint env vars set -- skipped (no toolbox resources
+       declared in any service's agent.manifest.yaml.)
+
+Authentication
+   (-) authentication -- skipped (remote check excluded by --local-only)
+
+Remote
+   (-) Foundry project endpoint reachable -- skipped (remote check excluded by --local-only)
+   (-) Developer has required role on Foundry project -- skipped (remote check excluded by --local-only)
+   (-) Hosted agents are active -- skipped (remote check excluded by --local-only)
+   (-) Manifest connections exist on Foundry project -- skipped (remote check excluded by --local-only)
+
+6 passed, 1 failed, 6 skipped
+
+To fix:
+
+  Review the fix: notes above for each failed check.
+
+Then re-run `azd ai agent doctor` to verify.
+```
+</details>
+
+**This is the expected state here, not a problem.** `FOUNDRY_PROJECT_ENDPOINT` is the *only*
+red check, and it cannot be anything else — `azd provision` in the next step is what writes it.
+If any check *above* it is red, stop and fix that one first; see
+[Lab 01 § 7](01-setup.md#7-verify-everything) for how the cascade works.
+
+<details>
+<summary>If instead you see <code>4 passed, 1 failed, 8 skipped</code> — no environment selected</summary>
+
+`init` creates and selects an azd environment for you, so this should not happen. It does if
+you deleted `.azure/`, copied the project without it, or are in the wrong folder.
+
+```text
+   (x) azd environment selected
+       Failed to get current environment: rpc error: code = Unknown desc = default environment not found
+       fix: Create one with `azd env new <name>` or select an existing one with `azd env select <name>`.
+   (-) FOUNDRY_PROJECT_ENDPOINT set -- skipped (environment check failed or skipped)
+   (-) manual env vars set -- skipped (no azd environment selected (cannot resolve agent.yaml variables))
+
+4 passed, 1 failed, 8 skipped
+
+To fix, run these commands in order:
+
+  1. azd env new  -- create or select an azd environment
+```
+
+✅ Verified — excerpt. Follow the `fix:` line, then re-run § 3 to set your values again.
+</details>
+
+> [!TIP]
+> Drop `--local-only` and `doctor` also probes Azure — endpoint reachability, your role
+> assignment, and whether hosted agents are running. There is nothing to reach yet, so save it
+> for [Lab 03](03-deploy.md#4-doctor--check-local-and-remote-state).
+
+### 5. `provision` — create Azure resources
 
 ```bash
 azd provision --no-prompt
@@ -183,6 +322,7 @@ SUCCESS: Your application was provisioned in Azure in 1 minute 20 seconds.
 Exactly two resources appear:
 
 ```bash
+azd env get-values | grep AZURE_RESOURCE_GROUP
 az resource list -g <rg> --query "[].{name:name,type:type}" -o table
 ```
 
@@ -221,7 +361,7 @@ Set it once, using the deployment name from `azure.yaml`:
 azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 ```
 
-### 5. `run` — the local loop
+### 6. `run` — the local loop
 
 ```bash
 azd ai agent run --no-client
@@ -265,7 +405,7 @@ Things worth noticing:
 > That is `DefaultAzureCredential` probing for an Azure managed identity that does not exist
 > locally. It falls back to your `az login` credential and the agent works fine.
 
-### 6. `invoke --local` — talk to it
+### 7. `invoke --local` — talk to it
 
 In a second terminal:
 

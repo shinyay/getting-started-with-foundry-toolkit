@@ -2,14 +2,15 @@
 
 > ⏱️ **15 min** · 📋 **Requires:** Azure subscription · 💰 **$0** · ☁️ **Creates 0 Azure resources**
 
-Go from a clean machine to `azd ai agent doctor` reporting all green.
+Go from a clean machine to a working toolchain: the right `azd`, five extensions, both
+sign-ins, and `azd ai agent doctor` running.
 
 ## What you'll learn
 
 - Install the `azd` version that can read current Foundry Toolkit manifests.
 - Install the agent, inspector, projects and toolbox extensions.
 - Sign in with both CLIs the labs use.
-- Run `doctor` and understand its exit codes.
+- Read `doctor` output — its three groups, its cascade of skips, and its exit codes.
 
 ## Steps
 
@@ -228,89 +229,34 @@ Claude Code:  /plugin install azure@claude-plugins-official
 
 ### 7. Verify everything
 
-`doctor` reads a project, so this section needs one — and you will not have one until
-[Lab 02](02-first-agent.md) runs `azd ai agent init`. Read it now to learn how to *interpret*
-the output; run it for real at the start of Lab 02. (For what `doctor` reports right now, with
-no project at all, see [Checkpoint](#-checkpoint) below.)
+`azd ai agent doctor` is the best debugging tool in the toolkit: **13 checks** across local
+config, authentication and remote state, each failure naming the exact env var, role or
+command that fixes it.
 
-Inside an initialised agent project:
+**It reads a project, and you do not have one yet.** `azd ai agent init` in
+[Lab 02](02-first-agent.md) creates the first one. So this section teaches you to *read*
+`doctor`; there are three states you will actually see, in three different places:
 
-```bash
-azd ai agent doctor
-```
+| Output | Where you can actually get it |
+|---|---|
+| Outside any project | the [Checkpoint](#-checkpoint) at the end of this lab |
+| Scaffolded, before `provision` | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
+| All-green | [Lab 03 § 4](03-deploy.md#4-doctor--check-local-and-remote-state), after deploying |
 
-<details open>
-<summary>✅ Verified output — captured 2026-08-09, before provisioning</summary>
+How to read any `doctor` run:
 
-```text
-azd ai agent doctor
-
-Local
-   (✓) azd extension reachable
-   (✓) azure.yaml present and parseable
-   (✓) azd environment selected
-   (✓) agent service in azure.yaml
-   (x) FOUNDRY_PROJECT_ENDPOINT set
-       FOUNDRY_PROJECT_ENDPOINT is not set in the current azd environment
-       fix: Run `azd provision` to create the Foundry project, or `azd env set
-       FOUNDRY_PROJECT_ENDPOINT <https://...>` to point at an existing one.
-   (✓) agent definition valid (per service)
-   (✓) manual env vars set
-   (-) Manifest toolboxes have endpoint env vars set -- skipped (no toolbox resources
-       declared in any service's agent.manifest.yaml.)
-
-Authentication
-   (-) authentication -- skipped (remote check excluded by --local-only)
-
-Remote
-   (-) Foundry project endpoint reachable -- skipped (remote check excluded by --local-only)
-   (-) Developer has required role on Foundry project -- skipped (remote check excluded by --local-only)
-   (-) Hosted agents are active -- skipped (remote check excluded by --local-only)
-   (-) Manifest connections exist on Foundry project -- skipped (remote check excluded by --local-only)
-
-6 passed, 1 failed, 6 skipped
-
-To fix:
-
-  Review the fix: notes above for each failed check.
-
-Then re-run `azd ai agent doctor` to verify.
-```
-</details>
-
-**Read this output, don't just scan it.** Three things it teaches:
-
-1. **13 checks in three groups** — Local (8), Authentication (1), Remote (4). `--local-only`
-   skips the 5 network ones, which is why 6 are skipped here.
+1. **13 checks in three groups** — Local (8), Authentication (1), Remote (4).
+   `--local-only` skips the five network ones.
 2. **Every failure carries a `fix:` line with the exact command.** That is what makes `doctor`
-   better than reading an error.
-3. **A red `(x)` before you provision is correct.** `FOUNDRY_PROJECT_ENDPOINT` cannot exist yet —
-   `azd provision` writes it. You are "ready" when the *Local* group is clean apart from that one.
+   better than reading a stack trace.
+3. **Skips cascade from failures.** A failed check turns everything downstream of it into a
+   *skip*, not a failure. Always fix the topmost `(x)` first — the ones below it are usually
+   not real problems. The Checkpoint below shows **one** failure producing **11** skips.
+4. **A red `(x)` is not always wrong.** Before `azd provision`, `FOUNDRY_PROJECT_ENDPOINT`
+   cannot exist. "Ready" means the Local group is clean *apart from the checks that depend on
+   resources you have not created yet*.
 
-<details>
-<summary>What it looks like with no environment selected at all</summary>
-
-```text
-   (x) azd environment selected
-       Failed to get current environment: rpc error: code = Unknown desc = default environment not found
-       fix: Create one with `azd env new <name>` or select an existing one with `azd env select <name>`.
-   (-) FOUNDRY_PROJECT_ENDPOINT set -- skipped (environment check failed or skipped)
-   (-) manual env vars set -- skipped (no azd environment selected (cannot resolve agent.yaml variables))
-
-4 passed, 1 failed, 8 skipped
-
-To fix, run these commands in order:
-
-  1. azd env new  -- create or select an azd environment
-```
-
-✅ Verified. Note the **cascade**: one failed check turns later checks into *skips*, not
-failures. Always fix the topmost `(x)` first — the ones below it may not be real problems.
-</details>
-
-`doctor` is the best debugging tool in the toolkit. Run it whenever anything is odd — it
-checks local config, auth **and** remote state, and names the exact env var or role that is
-missing.
+Run it whenever anything is odd — it is faster than reading an error.
 
 Exit codes matter in automation:
 
@@ -322,16 +268,28 @@ Exit codes matter in automation:
 
 ### 8. Region and quota
 
-The samples default to **`gpt-5.4-mini`**, `GlobalStandard`, capacity `10`.
+The samples default to **`gpt-5.4-mini`**, `GlobalStandard`, capacity `10`. Decide your region
+now — you will set it in
+[Lab 02 § 3](02-first-agent.md#3-env--point-at-your-subscription).
 
-```bash
-azd env set AZURE_LOCATION eastus2
-azd env set AZURE_AI_DEPLOYMENTS_LOCATION eastus2   # optional: models in a different region
-```
+| Variable | Controls | Set it when |
+|---|---|---|
+| `AZURE_LOCATION` | where the Foundry project is created | always |
+| `AZURE_AI_DEPLOYMENTS_LOCATION` | where the **model** is deployed | you have no model quota in `AZURE_LOCATION` |
 
 `AZURE_AI_DEPLOYMENTS_LOCATION` exists so you can keep the project near you while placing the
 model where you actually have quota. If provisioning fails on capacity, change that one
 variable rather than moving the whole project.
+
+> [!WARNING]
+> **Do not try to set these yet.** `azd env set` writes into an azd environment, and the first
+> environment is created by `azd ai agent init` in Lab 02. Run it before that and it refuses:
+>
+> ```text
+> ERROR: no project exists; to create a new project, run `azd init`
+> ```
+>
+> ✅ Verified 2026-08-12 — exit code `1`, and nothing is written to disk.
 
 ## ✅ Checkpoint
 
@@ -413,6 +371,7 @@ If you see something else, jump to *If that didn't work* below.
 | `doctor` exits `2` | Every check was skipped. | Run it inside an initialized project after Lab 02 has provisioned resources. |
 | `1 passed, 1 failed, 11 skipped` | **Nothing is wrong.** You are not inside an agent project yet. | Expected at the end of this lab. `azd ai agent init` in [Lab 02](02-first-agent.md) clears it. |
 | `doctor` is not all-green | Also expected. It cannot be until an agent is deployed. | Continue to [Lab 02](02-first-agent.md); all-green arrives in [Lab 03](03-deploy.md#4-doctor--check-local-and-remote-state). |
+| `azd env set` → `ERROR: no project exists` | `azd env set` needs an azd environment, and none exists yet. | Expected in this lab. `azd ai agent init` in [Lab 02](02-first-agent.md) creates it; set your variables there. |
 
 Everything else: [troubleshooting](../reference/troubleshooting.md).
 
