@@ -62,16 +62,29 @@ jobs:
       - name: Check YAML parses
         run: |
           python - <<'PY'
-          import glob, sys, yaml
-          bad = []
-          for f in glob.glob('**/*.y*ml', recursive=True):
-              try:
-                  list(yaml.safe_load_all(open(f)))
-              except Exception as e:
-                  bad.append(f"{f}: {e}")
+          import os, sys, yaml
+
+          # os.walk, not glob('**'): glob's wildcards never descend into dot-directories, so
+          # `.github/` and `.agent_configs/` were silently exempt — this check could not see
+          # its own workflow file, the issue-form templates, or a shipped sample asset.
+          # A malformed issue form does not fail loudly; it just stops rendering on GitHub.
+          SKIP = {'.git', '.venv', 'venv', 'node_modules', '__pycache__', 'bin', 'obj'}
+
+          bad, n = [], 0
+          for root, dirs, names in os.walk('.'):
+              dirs[:] = [d for d in dirs if d not in SKIP]
+              for name in sorted(names):
+                  if not name.endswith(('.yml', '.yaml')):
+                      continue
+                  f = os.path.relpath(os.path.join(root, name), '.')
+                  n += 1
+                  try:
+                      list(yaml.safe_load_all(open(f)))
+                  except Exception as e:
+                      bad.append(f"{f}: {e}")
           for b in bad:
               print(f"::error::invalid YAML {b}")
-          print(f"{len(bad)} invalid YAML file(s)")
+          print(f"{len(bad)} invalid YAML file(s) of {n} scanned")
           sys.exit(1 if bad else 0)
           PY
 

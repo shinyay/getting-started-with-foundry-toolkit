@@ -1,0 +1,57 @@
+name: 📗 Something else about the guide
+description: Wrong, unclear, missing or unreachable content — anything that is not a stale command.
+title: "[docs] "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If a **command** in the guide no longer behaves as shown, close this and use
+        *📕 A documented command no longer works* instead — that form collects the version
+        information needed to re-verify the block, and this one does not.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem?
+      options:
+        - Wrong — it says something that is not true
+        - Unclear — it is true but I could not follow it
+        - Missing — I needed something that is not here
+        - In the wrong layer — an explanation in tutorial/, or a command in learn/
+        - A sample does not run
+        - A link, anchor or diagram is broken
+        - Suggestion
+    validations:
+      required: true
+
+  - type: input
+    id: page
+    attributes:
+      label: Which page or sample?
+      description: Repository-relative path. Leave blank if the problem is that the page does not exist.
+      placeholder: docs/learn/05-where-code-runs.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the problem?
+      description: >-
+        Quote the sentence you are objecting to if there is one. For a sample that will not
+        run, paste the error verbatim and redact subscription IDs, tenant IDs and absolute
+        paths containing your username.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+      description: >-
+        If you are correcting a fact, say how you know — a captured `--help`, a run you
+        made, or an upstream release note. This repo does not accept corrections from
+        memory, including its maintainer's.
+    validations:
+      required: false

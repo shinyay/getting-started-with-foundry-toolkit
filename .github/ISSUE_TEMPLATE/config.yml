@@ -1,0 +1,15 @@
+# Discussions are not enabled on this repository, so every contact link below points at
+# something that actually exists. Revisit this file if Discussions are turned on.
+blank_issues_enabled: false
+contact_links:
+  - name: 🐞 A bug in azd ai agent itself
+    url: https://github.com/microsoft/foundry-toolkit/issues
+    about: >-
+      This repo documents the toolkit; it is not the toolkit. Report product bugs upstream —
+      then feel free to open an issue here too, so the guide can warn readers meanwhile.
+  - name: 🗒️ Did the preview just change under you?
+    url: https://github.com/microsoft/foundry-toolkit/blob/main/WHATS_NEW.md
+    about: WHATS_NEW.md is the only continuously-maintained upstream source, and usually explains it.
+  - name: 🔧 Check the troubleshooting page first
+    url: https://github.com/shinyay/getting-started-with-foundry-toolkit/blob/main/docs/reference/troubleshooting.md
+    about: 21 sections of real, captured failures — including the three that break almost every first run.

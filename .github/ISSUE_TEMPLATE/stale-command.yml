@@ -1,0 +1,151 @@
+# NOTE: `validations.required` is enforced by GitHub on PUBLIC repositories only. While this
+# repo is private the required fields below are advisory, and a reporter can submit an empty
+# form. That is not a bug in this file — it starts enforcing the day the repo goes public.
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema
+name: 📕 A documented command no longer works
+description: A command in docs/ or samples/ behaves differently from what the page shows.
+title: "[stale] "
+labels: ["bug", "documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This guide is pinned to a **preview** toolchain (`azd` extensions at `1.0.0-beta.*`),
+        so its characteristic failure is a documented command that quietly stops matching
+        reality. None of the nine CI checks can catch that — they never call Azure or run
+        `azd`. You hitting it is the only detector this repo has. Thank you.
+
+        **Paste output verbatim.** Do not retype it, summarise it, or tidy it up. The whole
+        point of this repo is that its blocks were captured, not written — a re-verification
+        made from a paraphrase is worth nothing.
+
+        **Redact before you paste:** subscription and tenant IDs, resource names, UPNs, and
+        absolute paths containing your username. `azd ai agent doctor` already redacts
+        principal IDs and UPNs unless you pass `--unredacted` — so don't pass it.
+
+  - type: input
+    id: page
+    attributes:
+      label: Which page?
+      description: Repository-relative path.
+      placeholder: docs/tutorial/03-deploy.md
+    validations:
+      required: true
+
+  - type: input
+    id: block
+    attributes:
+      label: Which block on that page?
+      description: >-
+        The nearest heading, or a line number. If you can, link the block directly —
+        press `y` on GitHub first so the URL pins to a commit.
+      placeholder: "## Step 2 — deploy, or line 88"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: label
+    attributes:
+      label: How was that block labelled?
+      description: >-
+        This decides what the fix is. A ✅ block that stopped working is a regression to
+        re-verify; an illustrative one was never executed and may just need adapting.
+      options:
+        - "✅ Verified <date> — claimed to be captured from a real run"
+        - "Illustrative — explicitly marked as never executed"
+        - "Neither — the block carries no label"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: What kind of failure?
+      options:
+        - The command or subcommand no longer exists
+        - A flag was renamed, removed, or now means something else
+        - It runs, but the output differs from the page
+        - It errors out
+        - It hangs, or waits for input the page does not mention
+        - It exits 0 but did not actually do anything
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: The command, exactly as the page shows it
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened — verbatim
+      description: Full output, including the error. Trim only the genuinely irrelevant middle, and say where you trimmed.
+      render: console
+    validations:
+      required: true
+
+  - type: textarea
+    id: azd-version
+    attributes:
+      label: "`azd version`"
+      render: console
+    validations:
+      required: true
+
+  - type: textarea
+    id: extensions
+    attributes:
+      label: "`azd extension list --installed`"
+      description: >-
+        The whole table, not just the extension you think is at fault. Extensions gate each
+        other, and the `INSTALLED` vs `LATEST` columns are usually where the answer is.
+      render: console
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`azd ai agent doctor --local-only` (optional, but it usually names the cause)"
+      description: >-
+        `--local-only` skips the network-dependent checks, so it is safe to run offline and
+        will not touch your subscription.
+      render: console
+    validations:
+      required: false
+
+  - type: input
+    id: platform
+    attributes:
+      label: OS and shell
+      placeholder: "macOS 15 / zsh, Ubuntu 24.04 / bash, Windows 11 / PowerShell 7"
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: >-
+        Did it work before? Do you know which extension version changed? A link to the
+        upstream release note is the fastest possible fix.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: The output above is pasted verbatim from my terminal, not reconstructed from memory.
+          required: true
+        - label: I removed subscription IDs, tenant IDs and absolute paths containing my username.
+          required: true
+        - label: I checked the [FAQ](https://github.com/shinyay/getting-started-with-foundry-toolkit/blob/main/docs/reference/faq.md) and [troubleshooting](https://github.com/shinyay/getting-started-with-foundry-toolkit/blob/main/docs/reference/troubleshooting.md).
+          required: false

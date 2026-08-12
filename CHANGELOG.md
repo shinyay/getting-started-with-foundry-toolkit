@@ -24,6 +24,23 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Added
 
+- **`CONTRIBUTING.md`, issue forms and a PR template.** `AGENTS.md` was the only contributor
+  contract, and GitHub does not surface that file to humans anywhere in its UI. The new
+  [`CONTRIBUTING.md`](CONTRIBUTING.md) is deliberately a short entry point that defers to
+  `AGENTS.md` rather than restating it — a rule written down twice drifts in one of the two
+  copies, which is the same principle as rule 7.
+- **A *stale command* issue form.** This repo's characteristic failure is not a typo: it is a
+  documented command that silently stops working when a `1.0.0-beta.*` extension ships a
+  breaking change. No CI check can detect that, because none of the nine call Azure or run
+  `azd` — a reader hitting it is the only detector that exists. The form collects exactly
+  what re-verification needs: the page, the block, whether that block was labelled
+  **✅ Verified** or **illustrative**, `azd version`, the full
+  `azd extension list --installed` table, and the actual output verbatim. It asks the
+  reporter to redact subscription and tenant IDs and absolute paths, and to run
+  `azd ai agent doctor --local-only` *without* `--unredacted`, which is the flag that would
+  otherwise print principal IDs and UPNs into a public issue.
+- **`docs-issue.yml` as a catch-all.** Blank issues are now disabled, so disabling them
+  without a general form would have made some problems unreportable.
 - **`evidence/` — 49 verbatim `--help` captures (212 KB).** The baseline rule 1 is checked
   against now lives in the repo instead of in a throwaway working directory, so a
   contributor can diff a changed command against what was actually observed. Includes four
@@ -52,6 +69,14 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   being force-run on Node 24 with a deprecation warning; when Node 20 is removed the nine
   validation checks would have stopped running, which is this repo's only guarantee that
   its documentation still holds. Both bumped to `@v7`.
+- **CI check 2 was blind to every dot-directory, including its own workflow file.** Python's
+  `glob` wildcards do not descend into paths beginning with a dot, so `**/*.y*ml` matched 9
+  of the repo's 11 YAML files — silently exempting `.github/workflows/validate.yml` and the
+  sample asset `samples/python/04-eval/src/hello-world/.agent_configs/baseline/metadata.yaml`.
+  The gap mattered immediately: the issue forms added above live under `.github/` and would
+  never have been parsed, and a malformed issue form does not fail loudly — it just stops
+  rendering on GitHub. Switched to `os.walk`; the check now reports how many files it
+  scanned, so the next such gap is visible rather than inferred.
 
 ---
 

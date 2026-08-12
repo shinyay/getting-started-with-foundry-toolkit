@@ -295,13 +295,17 @@ breakdown, including the standing daily cost container mode adds: [💰 Cost](do
 
 ## 🤝 Contributing
 
-Found a bug, or has the preview moved on? [Open an issue](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new).
+Found a bug, or has the preview moved on?
+
+- 📕 **[A documented command no longer works](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new?template=stale-command.yml)** — the most valuable report you can file. CI cannot catch this: none of the nine checks call Azure or run `azd`.
+- 📗 [Anything else about the guide](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new/choose)
 
 Because this guide's value is that its output is **real**, please re-run the command and paste
 the actual output when correcting a verified block.
 
-Contributor rules and the nine local validation checks are in [`AGENTS.md`](AGENTS.md).
-Release history and the CalVer policy are in [`CHANGELOG.md`](CHANGELOG.md).
+Start at [`CONTRIBUTING.md`](CONTRIBUTING.md). The rules themselves and the nine local
+validation checks are in [`AGENTS.md`](AGENTS.md); release history and the CalVer policy are
+in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -309,7 +313,7 @@ Release history and the CalVer policy are in [`CHANGELOG.md`](CHANGELOG.md).
 
 If this project helps you, please consider:
 - ⭐ Starring this repository
-- 🐛 [Reporting issues](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new)
+- 🐛 [Reporting issues](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new/choose)
 - 📢 Sharing with others
 
 ---
