@@ -50,7 +50,7 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Security
 
-- **History rewritten to drop an absolute capture path.** `d13d2b6` shortened
+- **History rewritten to drop an absolute capture path.** [`5b856bb`](https://github.com/shinyay/getting-started-with-foundry-toolkit/commit/5b856bb) shortened
   `/home/<user>/.copilot/session-state/<uuid>/files/rdcheck/infra` to `<work-dir>` in
   [infrastructure](docs/reference/infrastructure.md), but only at the tip — the original
   string survived in the parent commit, so publishing the repository would have republished
