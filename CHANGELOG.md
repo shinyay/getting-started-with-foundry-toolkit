@@ -71,17 +71,20 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   What remains exposed is one absolute path: a Linux username identical to the owner's
   public GitHub handle, plus a session UUID meaningless outside the machine that made it —
   strictly less identifying than the tenant and subscription IDs this repo publishes on
-  purpose. The resolution is time, not a support ticket: GitHub's events endpoint
-  [retains only 30 days](https://docs.github.com/en/rest/activity/events), so the abandoned
-  SHAs stop being enumerable on or about **2026-09-11**. A purge request to GitHub Support is
-  prepared but likely to be declined — GitHub
+  purpose. **A purge request to GitHub Support was drafted and deliberately not filed.**
+  GitHub
   [states](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
-  it "won't remove non-sensitive data", and a filesystem path with nothing to rotate does not
-  clear that bar. Recorded here rather than quietly fixed, because the reasonable
-  assumption — *rewriting history removes the data* — is wrong, and anyone repeating this
-  procedure will make the same mistake. If there is a next time, `git-filter-repo`'s
-  `--sensitive-data-removal` flag (≥ 2.47) is the documented way to do it; this rewrite used
-  plain `--replace-text`.
+  Support "won't remove non-sensitive data, and will only assist in the removal of sensitive
+  data in cases where we determine that the risk can't be mitigated by rotating affected
+  credentials" — a filesystem path has no credential to rotate and does not clear that bar,
+  so the request would have consumed a support engineer's time to arrive at the answer
+  already known. The resolution is time instead: GitHub's events endpoint
+  [retains only 30 days](https://docs.github.com/en/rest/activity/events), so the abandoned
+  SHAs stop being enumerable on or about **2026-09-11**, tracked in #8. Recorded here rather
+  than quietly fixed, because the reasonable assumption — *rewriting history removes the
+  data* — is wrong, and anyone repeating this procedure will make the same mistake. If there
+  is a next time, `git-filter-repo`'s `--sensitive-data-removal` flag (≥ 2.47) is the
+  documented way to do it; this rewrite used plain `--replace-text`.
 
 ### Changed
 
