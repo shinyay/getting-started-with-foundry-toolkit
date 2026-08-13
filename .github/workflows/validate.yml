@@ -376,3 +376,38 @@ jobs:
           print(f"{len(bad)} broken anchor(s)")
           sys.exit(1 if bad else 0)
           PY
+
+      - name: Check markdown tables are rectangular
+        run: |
+          python - <<'PY'
+          import glob, re, sys
+
+          # GFM splits a row on every unescaped '|', including inside code spans, so a table
+          # cell may only contain a pipe written as '\|'. Counting them therefore counts the
+          # cells the reader actually gets, not the ones the author meant.
+          bad = []
+          for f in sorted(glob.glob('**/*.md', recursive=True)):
+              fence = False
+              width = None
+              for n, line in enumerate(open(f, encoding='utf-8').read().splitlines(), 1):
+                  if line.lstrip().startswith('```'):
+                      fence, width = not fence, None
+                      continue
+                  if fence:
+                      continue
+                  t = line.strip()
+                  if not t.startswith('|'):
+                      width = None
+                      continue
+                  cells = len(re.findall(r'(?<!\\)\|', t)) - 1
+                  if width is None:
+                      width, head = cells, n
+                      continue
+                  if cells != width:
+                      bad.append(f"{f}:{n}: {cells} cells, header at line {head} has {width}")
+
+          for b in bad:
+              print(f"::error::ragged table {b}")
+          print(f"{len(bad)} ragged table row(s)")
+          sys.exit(1 if bad else 0)
+          PY

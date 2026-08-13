@@ -35,18 +35,27 @@ flowchart LR
 
 ### 1. Pick a sample
 
-The CLI ships a curated catalog — **21 Python** and **13 C#** samples today.
+The CLI ships a curated catalog. The full list and the current counts live in
+[sample-catalog.md](../reference/sample-catalog.md) — this page deliberately does not restate
+them, because they change without warning.
 
 ```bash
 azd ai agent sample list --language python
 azd ai agent sample list --language dotnetCsharp
 ```
 
+> [!IMPORTANT]
+> **The catalog is served from GitHub and grows without an extension release.** Between
+> 2026-08-12 and 2026-08-14 it gained three Python samples while `azure.ai.agents` stayed at
+> `1.0.0-beta.9`. So match on the `Manifest:` URL, never on a count or a position. What did
+> *not* move across those two runs: six `featured` samples, exactly one `recommended`, and
+> this lab's sample 5th in the list.
+
 Each sample prints as three lines. The list is ordered **six `featured` samples first, then the
-other fifteen**, each group alphabetical by title — so the entry this lab uses is 5th, not 1st:
+rest**, each group alphabetical by title — so the entry this lab uses is 5th, not 1st:
 
 <details open>
-<summary>✅ Verified output — captured 2026-08-12, 1 of 21 entries plus the closing line</summary>
+<summary>✅ Verified output — the entry this lab uses, plus the closing line; entry captured 2026-08-12, closing line re-captured 2026-08-14</summary>
 
 ```text
 Sample: Basic agent (Responses, Agent Framework, Python)
@@ -54,7 +63,7 @@ Description: A basic Agent Framework agent hosted by Foundry using the Responses
 Manifest: https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/python/hosted-agents/agent-framework/responses/01-basic/azure.yaml
 ```
 
-The last line of the command, after all 21 entries:
+The last line of the command, after every entry:
 
 ```text
 Run `azd ai agent sample list --output json` for the machine-readable form (includes ready-to-run initCommand).
@@ -70,13 +79,14 @@ Run `azd ai agent sample list --output json` for the machine-readable form (incl
 > | Basic agent (**Invocations**, Agent Framework, Python) | `agent-framework/invocations/01-basic` | ❌ different wire protocol |
 >
 > Match on the whole `Manifest:` URL, never on `01-basic` alone. Pick the invocations variant
-> and every output below will differ. In the 2026-08-12 catalog they are printed **adjacent**,
-> 4th and 5th. Four more titles — Hello World, Note-taking, LangGraph Chat and Foundry Toolbox —
-> also ship in both protocols, so this is the rule, not an exception.
+> and every output below will differ. They are printed **adjacent**, 4th and 5th — that held on
+> both the 2026-08-12 and 2026-08-14 catalogs. Four more titles — Hello World, Note-taking,
+> LangGraph Chat and Foundry Toolbox — also ship in both protocols, so this is the rule, not an
+> exception.
 
 > [!NOTE]
 > **The text form hides the two fields that tell you which sample to start with.** `featured`
-> and `recommended` exist only in the JSON below; exactly one of the 21 entries carries
+> and `recommended` exist only in the JSON below; exactly one entry carries
 > `"recommended": true`, and it is the one this lab uses. Nothing in the text output marks it.
 
 > [!TIP]
@@ -583,7 +593,11 @@ Things worth noticing:
 - `azd ai agent run` opens **two azd-owned ports**: the agent on **8088** (`--port`) and the
   Agent Inspector UI on **8087** (`--inspector-port`). Drop `--no-client` to open Inspector.
 - `Agent ready.` and the `Next:` block are **terminal-only**, like `init`'s.
-- Stopping it with Ctrl+C prints `Stopping agent...` then `Agent stopped.`
+- Stopping it with Ctrl+C prints `Stopping agent...` then `Agent stopped.` — verified
+  2026-08-14 by sending `SIGINT` to a running server. If the process dies on its own instead,
+  you get `Agent stopped.` alone, with no `Stopping agent...` before it.
+- `azd ai agent run` has **no reload**. Editing `main.py` while it runs changes nothing until
+  you stop it and start it again. This matters in [Lab 04](04-add-tools.md#5-add-your-own-tool).
 
 > [!WARNING]
 > **Do not follow the CLI's own `curl` tip — it 404s for this agent.**
@@ -706,6 +720,7 @@ If you see something else, jump to *If that didn't work* below.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `RuntimeError: Model deployment name is not configured.` | `azd provision` never sets `AZURE_AI_MODEL_DEPLOYMENT_NAME`. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| `KeyError: 'FOUNDRY_PROJECT_ENDPOINT'` in a traceback, then `Agent stopped.` | You ran `azd ai agent run` before `azd provision`, so nothing has written the endpoint into your azd environment yet. `main.py` reads it with `os.environ[...]`, which raises rather than defaulting. | Run § 5 first. Confirm with `azd env get-values \| grep FOUNDRY_PROJECT_ENDPOINT`. Reproduced 2026-08-14. |
 | Large traceback mentioning `169.254.169.254` at **startup** | The OpenTelemetry Azure-VM resource detector, not authentication. | Ignore it. |
 | Large traceback mentioning `169.254.169.254` on **first invoke** | `DefaultAzureCredential` probed for a managed identity that does not exist on a laptop. | Ignore it — the next log line shows it falling back to `AzureCliCredential`. |
 | `invoke --local` cannot connect | The server is not ready or is not running on port 8088. | Wait for `Running on http://0.0.0.0:8088`; check `--port` if you changed it. |
@@ -736,6 +751,14 @@ AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-5.4-mini"
 </details>
 
 ## → Next
+
+Before you go on, **stop the local server** — Ctrl+C in the terminal running
+`azd ai agent run`. Nothing in [Lab 03](03-deploy.md) needs it, it holds ports 8088 and 8087,
+and if you leave it up it will still be pointing at a Foundry project that Lab 03 deletes.
+
+Leave the **Azure** resources alone: Lab 03 deploys to the same project and tears it down at
+the end. Your azd environment, with `FOUNDRY_PROJECT_ENDPOINT` and
+`AZURE_AI_MODEL_DEPLOYMENT_NAME` set, is what Lab 03 starts from.
 
 [Lab 03 — Deploy and clean up](03-deploy.md)
 

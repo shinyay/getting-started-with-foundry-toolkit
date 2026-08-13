@@ -105,20 +105,25 @@ azd extension upgrade --all
 ```
 
 <details>
-<summary>✅ Verified output — captured 2026-08-12, everything already current</summary>
+<summary>✅ Verified output — captured 2026-08-14, everything already current (each <code>Upgrading …</code> line is shown once; see the note)</summary>
 
 ```text
 Upgrade azd extensions (azd extension upgrade)
 Upgrades the specified extensions on the local machine.
 
+Upgrading azure.ai.agents extension
   (-) Skipped: Upgrading azure.ai.agents extension (No upgrade available)
 
+Upgrading azure.ai.connections extension
   (-) Skipped: Upgrading azure.ai.connections extension (No upgrade available)
 
+Upgrading azure.ai.inspector extension
   (-) Skipped: Upgrading azure.ai.inspector extension (No upgrade available)
 
+Upgrading azure.ai.projects extension
   (-) Skipped: Upgrading azure.ai.projects extension (No upgrade available)
 
+Upgrading azure.ai.toolboxes extension
   (-) Skipped: Upgrading azure.ai.toolboxes extension (No upgrade available)
 
   5 skipped
@@ -126,6 +131,14 @@ Upgrades the specified extensions on the local machine.
 SUCCESS: Extensions upgraded successfully
 ```
 </details>
+
+> [!NOTE]
+> **Each `Upgrading <extension>` line is printed once or twice, and which ones double varies
+> between runs.** Three consecutive runs on an unchanged machine emitted 8, 10 and 8 of those
+> lines. They are ordinary output, not a redrawn progress line — the capture contains no
+> cursor-movement escape, so every one of them stays in your scrollback. The block above shows
+> each once. What matters is the `(-) Skipped:` line per extension, the `5 skipped` total and
+> `SUCCESS`.
 
 > [!NOTE]
 > That is what a **terminal** shows. `azd` prints a live `Upgrading <extension>` line and

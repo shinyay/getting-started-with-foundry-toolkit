@@ -119,7 +119,7 @@ all template types are azure.yaml
 | Captured VS Code Agent Builder docs | Agent Builder supports variables, MCP servers, function-calling tools from JSON schema/example, mock responses, Evaluation tab, View Code and View Snippet. |
 | Microsoft Foundry Skill from `microsoft/azure-skills` | Says prompt agents are created/updated through Foundry MCP tools (`agent_definition_schema_get`, `agent_update`, `agent_get`, `agent_delete`) with SDK fallback. This is **skill guidance, not live output from this repo**. |
 | This repo's [`docs/learn/README.md`](../learn/README.md) | Explains prompt agents as instructions + model config + catalog tools, usually built in Agent Builder or portal. |
-| This repo's `docs/reference/azure-yaml.md` | Shows `kind: hosted` in the verified manifest and notes `kind: hosted | prompt`, but does not give a verified prompt-agent `azure.yaml` schema. |
+| This repo's `docs/reference/azure-yaml.md` | Shows `kind: hosted` in the verified manifest and notes `kind: hosted \| prompt`, but does not give a verified prompt-agent `azure.yaml` schema. |
 
 > [!WARNING]
 > I could **not** verify a complete prompt-agent `agent.yaml` or `azure.yaml` schema from the

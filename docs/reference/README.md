@@ -42,7 +42,7 @@ Fifteen pages, grouped by what you are trying to do.
 | [`observability.md`](observability.md) | `monitor`, logs, and adding tracing |
 | [`cost.md`](cost.md) | what actually bills, and keeping it near zero 💰 |
 | [`multi-agent.md`](multi-agent.md) | A2A details, agent cards, trust boundaries and what is *not* verified |
-| [`sample-catalog.md`](sample-catalog.md) | all 34 upstream samples (21 Python + 13 C#) |
+| [`sample-catalog.md`](sample-catalog.md) | all 37 upstream samples (24 Python + 13 C#) |
 
 ---
 
@@ -63,7 +63,7 @@ Fifteen pages, grouped by what you are trying to do.
 | Runtimes | `python_3_13`, `python_3_14`, `dotnet_10` |
 | Protocols | `responses` ⭐, `invocations`, `invocations_ws`, `activity` |
 | CPU/memory tiers | `0.25/0.5Gi`, `0.5/1Gi`, `1/2Gi`, `2/4Gi` |
-| Resources created | 1 CognitiveServices account + 1 project | **2** | **2** |
+| Resources created | 1 CognitiveServices account + 1 project |
 | Verified timings | see the table below |
 
 ---
@@ -147,6 +147,34 @@ resource-group deletion and a Cognitive Services purge, neither of which is unde
 control. Budget for three minutes, and confirm with `az group exists` rather than trusting the
 `SUCCESS` line.
 
+### Blocks whose capture file was not kept
+
+A 2026-08-14 audit re-parsed every ✅ Verified block in Labs 01–04 against the retained capture
+files. Labs 01 and 04 reconcile completely. **Six blocks in Labs 02 and 03 do not**, and the
+reason in every case is that the capture was never saved to a file, not that the output is in
+doubt:
+
+| Page | Block | Why it does not reconcile |
+|---|---|---|
+| [Lab 02](../tutorial/02-first-agent.md) § 2 `init` | scaffold + `Next:` | The saved capture is a **redirect**, so it lacks the `Next:` block entirely and carries spinner lines. Corroborated instead by the Lab 04 pty capture, which shows the identical non-prompting `Next:` layout. |
+| [Lab 02](../tutorial/02-first-agent.md) § 6 `run` | startup log | Matches the saved capture line for line **except the timestamps, the PID and the hostname** — so the page quotes a second, unsaved session of the same command. |
+| [Lab 02](../tutorial/02-first-agent.md) § 5 `doctor` | `10 passed, 1 failed, 2 skipped` | No capture retained. The arithmetic is consistent with every other `doctor` run (13 checks). |
+| [Lab 03](../tutorial/03-deploy.md) § 2 `show` | `hello-world:1` | Captured 2026-08-08, before captures were kept. |
+| [Lab 03](../tutorial/03-deploy.md) § 3 `invoke` | remote reply | Same run, same reason. |
+| [Lab 03](../tutorial/03-deploy.md) § 5 `eval` | `3m43s` run | Captured 2026-08-09, same reason. |
+
+These are **not** relabelled illustrative: each was captured from a real run, and saying
+otherwise would be its own false claim. What is missing is the artefact that would let a
+reader re-check it. Closing the gap needs a billed Azure run of Labs 02 and 03 with
+`script -qec` captures kept alongside the existing ones.
+
+> [!TIP]
+> The audit also found that the checker used to enforce all this had been reading
+> `<details>` but not `<details open>`, and so had silently skipped **16 of the 30** blocks it
+> was believed to cover. Labs 02 and 03 use the `open` form throughout, which is why the gap
+> above went unseen. **A tool that reports nothing is not the same as a tool that reports
+> success.****
+
 Container mode was measured separately — it is the outlier:
 
 | | Code mode (default) | Container mode |
@@ -155,7 +183,7 @@ Container mode was measured separately — it is the outlier:
 | `azd deploy` | 2m21s | **2m40s** |
 | First `invoke` | 14.242s | **11.399s** |
 | `azd down --force --purge` | 1m46s | **2m5s** |
-| Resources created | **2** | **3** (adds a **Premium** ACR) | **2** |
+| Resources created | **2** | **3** (adds a **Premium** ACR) |
 | Role assignments | 0 | **1** — `AcrPull`, at *ACR* scope |
 
 What to take from this:

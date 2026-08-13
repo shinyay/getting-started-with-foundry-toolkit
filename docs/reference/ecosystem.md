@@ -25,7 +25,7 @@ Where everything lives, and how much to believe it.
 | Repo | What's actually in it |
 |---|---|
 | [`microsoft/foundry-toolkit`](https://github.com/microsoft/foundry-toolkit) | `WHATS_NEW.md` ⭐, issues, `doc/`, `samples/hosted-agent/sample-catalog.json`, `devpack-installer/`, the `microsoft-foundry` Canvas plugin |
-| [`microsoft-foundry/foundry-samples`](https://github.com/microsoft-foundry/foundry-samples) | the 34 samples `azd ai agent sample list` serves |
+| [`microsoft-foundry/foundry-samples`](https://github.com/microsoft-foundry/foundry-samples) | the samples `azd ai agent sample list` serves (37 on 2026-08-14 — see [`sample-catalog.md`](sample-catalog.md)) |
 | [`microsoft/azure-skills`](https://github.com/microsoft/azure-skills) | the `microsoft-foundry` Copilot skill |
 | [`microsoft/agent-framework`](https://github.com/microsoft/agent-framework) | the SDK the samples build on |
 | [`Azure/azure-dev`](https://github.com/Azure/azure-dev) | `azd` core + the `azure.yaml` JSON schema |

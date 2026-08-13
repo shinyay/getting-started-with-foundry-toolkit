@@ -1,7 +1,7 @@
 # 📚 Sample catalog
 
 Captured live from `azd ai agent sample list` (`azure.ai.agents 1.0.0-beta.9`).
-**21 Python + 13 C# = 34 samples.**
+**24 Python + 13 C# = 37 samples**, as of 2026-08-14.
 
 ```bash
 azd ai agent sample list --language python
@@ -26,7 +26,7 @@ https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/
 
 ---
 
-## 🐍 Python (21)
+## 🐍 Python (24)
 
 ### ⭐ Featured
 
@@ -62,12 +62,22 @@ https://github.com/microsoft-foundry/foundry-samples/blob/main/samples/
 | **Human-in-the-Loop agent** | none / BYO | `invocations` | `python/hosted-agents/bring-your-own/invocations/human-in-the-loop` |
 | **LangGraph Chat agent** | none / BYO | `invocations` | `python/hosted-agents/bring-your-own/invocations/langgraph-chat` |
 | **Note-taking agent** | none / BYO | `invocations` | `python/hosted-agents/bring-your-own/invocations/notetaking-agent` |
+| **Resilient Approval Gate agent** 🆕 | none / BYO | `invocations` | `python/hosted-agents/bring-your-own/invocations/resilient-approval-gate` |
+| **Resilient Research agent** 🆕 | none / BYO | `invocations` | `python/hosted-agents/bring-your-own/invocations/resilient-research` |
 | **Agent with Foundry Toolbox** | none / BYO | `invocations` | `python/hosted-agents/bring-your-own/invocations/toolbox` |
 | **Background agent** | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/background-agent` |
 | **Agent with Foundry Toolbox** | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/bring-your-own-toolbox` |
 | **Hello World agent** | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/hello-world` |
 | **LangGraph Chat agent** | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/langgraph-chat` |
 | **Agent with OpenAI Agents SDK** | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/openai-agents-sdk` |
+| **Resilient Steering agent** 🆕 | none / BYO | `responses` | `python/hosted-agents/bring-your-own/responses/resilient-steering` |
+
+> [!NOTE]
+> **The three 🆕 rows appeared between 2026-08-12 and 2026-08-14 with no extension release.**
+> `azure.ai.agents` was `1.0.0-beta.9` on both days. The catalog is fetched from GitHub at
+> call time, so it can grow — or lose an entry, as `03-mcp` shows — without anything on your
+> machine changing. Re-run the two commands at the top of this page rather than trusting this
+> snapshot.
 
 
 ---

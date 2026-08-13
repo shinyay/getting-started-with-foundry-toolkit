@@ -25,8 +25,10 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent sample list --language
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent sample list --language dotnetCsharp --output json
 ```
 
-Those commands returned **21 Python** templates and **13 C#** templates. Filtering titles and
-paths for workflow / multi-agent / A2A found:
+On 2026-08-12 those commands returned **21 Python** and **13 C#** templates; a recount on
+2026-08-14 found **24 Python** and the same 13 C#. None of the three added samples matches
+this filter, so the result below is unchanged. Filtering titles and paths for
+workflow / multi-agent / A2A found:
 
 | Language | Verified sample | Path |
 |---|---|---|

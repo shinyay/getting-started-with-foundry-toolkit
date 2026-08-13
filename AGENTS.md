@@ -70,7 +70,7 @@ AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai agent show
 
 ## Validation before committing
 
-CI runs **nine** checks (`.github/workflows/validate.yml`). Run them all locally first —
+CI runs **ten** checks (`.github/workflows/validate.yml`). Run them all locally first —
 none of them need Azure, network access or credentials:
 
 ```bash
@@ -105,3 +105,4 @@ PY
 | 7 | Version claims match `docs/reference/README.md` | one version in 14 files is 14 places to drift |
 | 8 | The three-layer contract holds | rule 2 above, made executable |
 | 9 | Every `#anchor` matches a real heading | caught 59 dangling anchors that check 1 could not see |
+| 10 | Every markdown table row has the header's cell count | caught two rows an agent had widened by mistake, and a `\|` that GFM was splitting a cell on |

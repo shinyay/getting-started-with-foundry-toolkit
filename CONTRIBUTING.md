@@ -9,7 +9,7 @@ valuable contribution is evidence that something no longer matches reality.
 
 > [!IMPORTANT]
 > **The rules live in [`AGENTS.md`](AGENTS.md), not here.** That file is the contract — seven
-> rules, the three-layer contract, and the copy-pasteable runner for the nine CI checks. It
+> rules, the three-layer contract, and the copy-pasteable runner for the ten CI checks. It
 > is written for coding agents but applies identically to humans, and this page deliberately
 > does not repeat it, because a rule stated in two places drifts in one of them.
 >
@@ -23,7 +23,7 @@ valuable contribution is evidence that something no longer matches reality.
 This guide is pinned to a **preview** toolchain — the `azd` extensions are all
 `1.0.0-beta.*`. Its characteristic failure is therefore not a typo: it is a **documented
 command that silently stops working** because an extension shipped a breaking change.
-Nothing in CI can detect that, because none of the nine checks call Azure or run `azd`.
+Nothing in CI can detect that, because none of the ten checks call Azure or run `azd`.
 Only a reader hitting it can.
 
 → **[Report a documented command that no longer works](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new?template=stale-command.yml)**
@@ -56,7 +56,7 @@ treats as a defect.
 
 ## Before you open a pull request
 
-1. Run the nine checks locally — the runner is in
+1. Run the ten checks locally — the runner is in
    [`AGENTS.md`](AGENTS.md#validation-before-committing). None of them need Azure, network
    access or credentials, so there is no reason not to.
 2. Add an entry under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md).

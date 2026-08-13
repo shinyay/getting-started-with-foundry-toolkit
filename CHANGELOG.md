@@ -24,6 +24,16 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Added
 
+- **A tenth CI check: markdown tables must be rectangular.** Every row must have the header's
+  cell count, counting only unescaped `|` — which is what GFM itself counts, so a pipe inside
+  a code span in a table cell is a real rendering bug unless written `\|`. Written after an
+  audit found that an agent editing this repo had widened both `Resources created` rows in
+  [`docs/reference/README.md`](docs/reference/README.md) while adding a column to a different
+  table, and that nine checks had passed straight over it. GitHub silently drops cells past
+  the header width, so the pages *looked*
+  right. It also found a `kind: hosted | prompt` in
+  [`alt-prompt-agents.md`](docs/tutorial/alt-prompt-agents.md) that GFM was splitting a cell
+  on. Reintroducing the original defect makes the check fail, which is how it was verified.
 - **`CONTRIBUTING.md`, issue forms and a PR template.** `AGENTS.md` was the only contributor
   contract, and GitHub does not surface that file to humans anywhere in its UI. The new
   [`CONTRIBUTING.md`](CONTRIBUTING.md) is deliberately a short entry point that defers to
@@ -31,7 +41,7 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   copies, which is the same principle as rule 7.
 - **A *stale command* issue form.** This repo's characteristic failure is not a typo: it is a
   documented command that silently stops working when a `1.0.0-beta.*` extension ships a
-  breaking change. No CI check can detect that, because none of the nine call Azure or run
+  breaking change. No CI check can detect that, because none of the ten call Azure or run
   `azd` — a reader hitting it is the only detector that exists. The form collects exactly
   what re-verification needs: the page, the block, whether that block was labelled
   **✅ Verified** or **illustrative**, `azd version`, the full
@@ -145,6 +155,54 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   case as if it were isolated.
 
 ### Fixed
+
+- **An audit of Labs 01–04 against the retained captures, 2026-08-14.** The four lab pages
+  were re-parsed block by block and every reproducible claim was re-run. Findings:
+
+  - **The checker enforcing all of this was itself broken.** It matched `<details>` but not
+    `<details open>`, so it silently skipped **16 of the 30** verified blocks in Labs 01–04 —
+    every block in Labs 02 and 03, which use the `open` form throughout. The clean bill of
+    health those pages had been given was an artefact of a tool printing nothing. Lab 04 was
+    unaffected, which is why its three walks caught what they caught.
+  - **[Lab 01](docs/tutorial/01-setup.md) was quoting `azd extension upgrade --all` with
+    output removed and no declaration.** The real command prints an `Upgrading <extension>`
+    line before each `(-) Skipped:` line; the capture contains no cursor-movement escape, so
+    those lines are permanent, not a redrawn progress indicator. Re-captured. They repeat
+    non-deterministically — three consecutive runs on an unchanged machine emitted 8, 10 and
+    8 of them — which the block now states.
+  - **The sample catalog had drifted, and the count had five homes.** A live recount found
+    **24 Python + 13 C#** where the repo claimed 21 + 13: three `bring-your-own` samples were
+    added upstream between 2026-08-12 and 2026-08-14 **with `azure.ai.agents` unchanged at
+    `1.0.0-beta.9`**, which is the clearest demonstration so far that the catalog is fetched
+    from GitHub at call time. [`sample-catalog.md`](docs/reference/sample-catalog.md) is now
+    the single home; [Lab 02](docs/tutorial/02-first-agent.md) links to it instead of
+    restating a number, and its ordinals are framed as things to verify rather than trust.
+    What did not move: six `featured`, exactly one `recommended`, this lab's sample 5th.
+  - **[Lab 02](docs/tutorial/02-first-agent.md) left the reader inside a foreground process.**
+    It starts `azd ai agent run`, mentions Ctrl+C only as a bullet in a notes list, and hands
+    off to [Lab 03](docs/tutorial/03-deploy.md), which opens straight into `azd deploy`. Its
+    `→ Next` now states what to stop, what to leave alone and what Lab 03 starts from — the
+    same defect fixed in Lab 04 § 6.
+  - **Two claims in Lab 02 were checked against a real run for the first time.** Ctrl+C does
+    print `Stopping agent...` then `Agent stopped.`, verified by sending `SIGINT` to a running
+    server; a process that dies on its own prints only the second line, which the page now
+    distinguishes. Running `run` before `provision` raises
+    `KeyError: 'FOUNDRY_PROJECT_ENDPOINT'` — a new troubleshooting row, and a different
+    failure from Lab 04's `ValueError`, because the two samples read the variable differently.
+  - **Both `Resources created` rows in
+    [`docs/reference/README.md`](docs/reference/README.md) had been widened by mistake** while
+    a column was added to a different table — the canonical two-column table had grown two
+    extra cells, the container-mode table one. Fixed, and check 10 now prevents it.
+  - **Six blocks in Labs 02 and 03 have no retained capture**, and the ledger now
+    [says so explicitly](docs/reference/README.md#blocks-whose-capture-file-was-not-kept)
+    rather than leaving a ✅ that nothing backs. They are not relabelled illustrative — each
+    came from a real run, and claiming otherwise would be its own false statement. Lab 02's
+    `init` block is corroborated by the Lab 04 pty capture; its `run` block matches the saved
+    capture except for timestamps, PID and hostname, so a second unsaved session was quoted.
+    Closing the gap needs a billed run of Labs 02 and 03 with the captures kept.
+
+  Labs 01 and 04 now reconcile completely: **24 of 30 blocks EXACT, and the other six are the
+  documented gap above.**
 
 - **A third Lab 04 walk, driven end-to-end by an agent, found six more defects — and one of
   them was mine.**
