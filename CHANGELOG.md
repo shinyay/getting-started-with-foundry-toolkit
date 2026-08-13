@@ -97,6 +97,16 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Verified
 
+- **Lab 04 walked a second time from an empty directory, 2026-08-13.** Same day, same
+  toolchain (`azd 1.30.0`, all five extensions unchanged), following the corrected page rather
+  than this repository's samples, with thirteen predictions registered *before* the first live
+  command. Nine reproduced exactly — including the `gen_ai.tool.definitions` escaping, the
+  `finish_reasons` distribution, the OTel span-dump structure, the two clocks nine hours apart
+  in `monitor`, the `7 passed, 1 failed, 5 skipped` doctor state, the 32-character project
+  name and `ERROR: no project exists` from the wrong directory. Four did not, and each became
+  a fix above. Torn down and confirmed with **both** `az group exists` → `false` and
+  `az cognitiveservices account list-deleted` → empty — a distinction this run is the reason
+  for.
 - **Lab 04 walked end-to-end on live Azure, 2026-08-13.** `init` (interactive) → `doctor` →
   `provision` → local `run` → two local `invoke`s → `deploy` → remote `invoke` → `show` →
   `monitor` → `down --force --purge`, torn down and confirmed with `az group exists` → `false`.
@@ -126,6 +136,35 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Walking Lab 04 a second time, from an empty directory, found five more defects — three of
+  them only reachable on the path that works.** The first walk hit
+  `SubscriptionNotFound` during `init` and recovered by setting environment variables by hand.
+  That detour skipped part of `init` entirely, and the page was written from the detour.
+  - **`init` asks *five* questions, not four.** The fifth — *Model deployment `gpt-5.4-mini`
+    is defined in the azure.yaml … How would you like to proceed?* — appeared nowhere in the
+    page, because the first walk aborted before reaching it. The captured evidence contained
+    **zero** occurrences of it.
+  - **§ 3 told the reader to run a command they do not need.** That fifth question sets
+    `AZURE_AI_MODEL_DEPLOYMENT_NAME`, so `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME
+    gpt-5.4-mini` is redundant here. The page had imported Lab 02's gotcha, which is real only
+    because Lab 02 passes `--no-prompt` and skips the question. A completed `init` leaves
+    **11** environment values; an interrupted one leaves 5.
+  - **`init` prints a `Next:` block that says `cd` into the new folder.** The previous entry
+    described the missing `cd` as the page losing the reader; azd was in fact telling them,
+    and only the page failed to. `provision`, by contrast, prints no `Next:` block at all.
+  - **`azd deploy` of unchanged code failed once with `404 / "Project not found"` — on a
+    project that existed.** `az resource list`, `azd ai agent show` and a successful remote
+    `invoke` all confirmed it at the same moment. Re-running unchanged succeeded in 14 s.
+    Intermittent, cause not established, now a troubleshooting row.
+  - **`azd down --force --purge` failed at the purge step with `409 RequestConflict`, and
+    `az group exists` still returned `false`.** The resource group was gone; the Cognitive
+    Services account was left soft-deleted, holding its name and its quota. The page said
+    *"`false` is the only confirmation that counts"* — that is now falsified, and § 7 checks
+    `az cognitiveservices account list-deleted` as well. Recovery took a manual
+    `az cognitiveservices account purge` about three minutes later.
+  - **The `All tenants` warning blamed the wrong thing.** A second run picked `3. All tenants`
+    and reached the correct subscription without incident. The hazard is two subscriptions
+    whose names differ only in the middle (`…-71560-2024-…` versus `…-118084-2025-…`).
 - **Re-checking Lab 04's own verified blocks against the stored captures found four blocks
   the previous entry had silently altered.** The claim *"this was captured from a real run"*
   had never been checked mechanically, only asserted. Stripping terminal control sequences

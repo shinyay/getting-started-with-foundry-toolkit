@@ -49,11 +49,11 @@ The local samples in this repo are here if you want to inspect them before scaff
 > 'azd init'` — verified by running `azd provision` from `02-tools/`. Same behaviour as
 > [Lab 02 § 2](02-first-agent.md#2-init--scaffold), which explains it in full.
 
-Unlike Lab 02, this command has no `--no-prompt`, so `init` **asks four questions** before it
+Unlike Lab 02, this command has no `--no-prompt`, so `init` **asks five questions** before it
 finishes. The first one has no equivalent anywhere in Lab 02:
 
 <details>
-<summary>✅ Verified output — the interactive tail of <code>init</code>, 2026-08-13 (paths elided)</summary>
+<summary>✅ Verified output — the interactive tail of <code>init</code>, 2026-08-13 (subscription name and ID elided; the list bodies each question scrolls through are omitted)</summary>
 
 ```text
 Installing required extensions...
@@ -63,24 +63,55 @@ Select an Azure subscription to provision your agent and Foundry project resourc
 ? Select a tenant:  3. All tenants
 ? Select subscription: <your-subscription-name> (<your-subscription-id>)
 Select an Azure location. This determines which models are available and where your Foundry project resources will be deployed.
+? Select location: (US) East US 2 (eastus2)
+
+Model deployment 'gpt-5.4-mini' is defined in the azure.yaml:
+  Model: gpt-5.4-mini (OpenAI), version 2026-03-17
+  SKU: GlobalStandard, capacity 10
+
+? How would you like to proceed?: Deploy as specified in azure.yaml
+
+Adopted the sample's azure.yaml as the project manifest at azure.yaml.
+
+Next:
+  cd agent-framework-agent-with-local-tools-responses
+  enter your new project folder
+
+  azd provision
+  set up your Foundry project, models, and connections
+
+  azd deploy
+  when ready to deploy to Azure
 ```
 
 </details>
 
 Answer **Create a new Foundry project** to follow this lab; **Use an existing Foundry project**
-reuses the one Lab 03 left behind, if you kept it.
+reuses the one Lab 03 left behind, if you kept it. Answer **Deploy as specified in azure.yaml**
+to the fifth; the other two options are **Choose a different model** and **Skip this model
+entirely (remove from azure.yaml)**.
+
+> [!IMPORTANT]
+> **The fifth question sets `AZURE_AI_MODEL_DEPLOYMENT_NAME` for you**, which is why § 3 below
+> does not ask you to. Lab 02 has to set it by hand only because `--no-prompt` skips this
+> question entirely. Same toolchain, opposite advice — the flag is the reason.
 
 > [!WARNING]
-> **`3. All tenants` can offer you a subscription that Azure then refuses.** Picking one from
-> that list produced `RESPONSE 404 / SubscriptionNotFound` on the very next step, and azd's own
-> `Suggestion:` — set `AZURE_LOCATION` — does not recover it, because the wrong subscription is
-> already written to the environment. Why a listed subscription is unusable was not established.
-> Pick your own tenant by name rather than `All tenants`, and if you are already stuck, see
-> [*If that didn't work*](#-if-that-didnt-work).
+> **The subscription picker can offer you one that Azure then refuses.** Choosing
+> `MCAPS-…-71560-2024-…` produced `RESPONSE 404 / SubscriptionNotFound` on the very next step;
+> the account's usable subscription was the near-identically named `MCAPS-…-118084-2025-…`.
+> azd's own `Suggestion:` — set `AZURE_LOCATION` — does not recover it, because the wrong
+> subscription is already written to the environment. `3. All tenants` is not itself the
+> hazard: a second run picked `All tenants` and reached the right subscription without
+> incident. **Read the whole name, not the prefix.** Why a listed subscription is unusable was
+> not established. If you are already stuck, see [*If that didn't work*](#-if-that-didnt-work).
 
-`init` also writes a random 8-character salt, `AZD_RESOURCE_TOKEN_SALT`, and derives the
-resource-group name from it **before contacting Azure at all** — see
-[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
+The `Next:` block is azd telling you what this page's § 3 assumes: **`cd` into the folder
+`init` created.** `init` also writes a random 8-character salt, `AZD_RESOURCE_TOKEN_SALT`, and
+derives the resource-group name from it **before contacting Azure at all** — see
+[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources). A completed `init` leaves
+**11** values in the environment; an `init` you interrupted leaves 5, which is a quick way to
+tell the two apart.
 
 ### 2. Inspect the tool definition
 
@@ -159,7 +190,6 @@ From inside the folder `init` created:
 ```bash
 azd ai agent doctor
 azd provision
-azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 ```
 
 `doctor` before `provision` gives a state that is **not** the one Lab 02 shows, because Lab 02
@@ -210,8 +240,9 @@ Then re-run `azd ai agent doctor` to verify.
 > [Lab 01 § 7](01-setup.md#7-verify-everything).
 
 `provision` took **1 min 21 s** here and produced the same output shape as
-[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources) — nothing new to read.
-Two things are worth checking against your own run:
+[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources) — nothing new to read. A
+second run measured 1 min 16 s. Unlike `init` and `invoke`, `provision` prints **no** `Next:`
+block. Two things are worth checking against your own run:
 
 ```bash
 azd env get-values | grep -E 'FOUNDRY_PROJECT_ENDPOINT|AZURE_RESOURCE_GROUP'
@@ -223,11 +254,13 @@ FOUNDRY_PROJECT_ENDPOINT="https://cog-<random>.services.ai.azure.com/api/project
 ```
 
 The environment name here is 51 characters; the project is `agent-framework-agent-with-local`
-— its first **32**. That was predicted before the run and matched exactly, which is the third
-confirmation of the naming rule in
+— its first **32**. That was predicted before the run and matched exactly on two separate
+runs, which is the third confirmation of the naming rule in
 [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
 
-Same gotcha as Lab 02: `AZURE_AI_MODEL_DEPLOYMENT_NAME` is never set by `azd provision`.
+**Unlike Lab 02, you do not have to set `AZURE_AI_MODEL_DEPLOYMENT_NAME`.** `provision` still
+never sets it — but § 1's fifth question already did, because this lab does not pass
+`--no-prompt`. Check rather than assume: `azd env get-values | grep MODEL_DEPLOYMENT`.
 
 ### 4. Run locally
 
@@ -401,8 +434,27 @@ Tools run **inside your container** — same code, same process. Nothing is regi
 Foundry, so there is no extra tool deployment step. `azd ai agent show` is the evidence:
 the deployed definition has **no tools field at all**, only identity, version and endpoints.
 
-Deploy took **2 min 22 s** on the first run. Redeploying unchanged code afterwards took
-**12 s** and left `Version` at `1`.
+Deploy took **2 min 22 s** on the first run and **2 min 6 s** on a second. Redeploying
+unchanged code afterwards took **12 s** / **14 s** and left `Version` at `1`.
+
+> [!WARNING]
+> **A redeploy immediately after the first deploy can fail with `Project not found` — and the
+> project is fine.** One of two runs produced this 9 s after starting, against a project that
+> `az resource list`, `azd ai agent show` and a working remote `invoke` all confirmed existed:
+>
+> ```text
+> RESPONSE 404: 404 Not Found
+> ERROR CODE: NotFound
+> {
+>   "error": {
+>     "code": "NotFound",
+>     "message": "Project not found"
+>   }
+> }
+> ```
+>
+> Re-running `azd deploy` unchanged succeeded in 14 s. **Retry before you diagnose.** The
+> other run redeployed first time, so this is intermittent and its cause was not established.
 
 The remote invoke prints two things the local one does not — a server-assigned session and a
 `Trace ID`:
@@ -474,6 +526,7 @@ azd ai agent monitor -f
 ```bash
 azd down --force --purge
 az group exists -n <your-resource-group>
+az cognitiveservices account list-deleted --query "[].name" -o json
 ```
 
 <details>
@@ -502,8 +555,46 @@ false
 
 </details>
 
-`false` is the only confirmation that counts. `SUCCESS` is not — see
-[Lab 03 § 6](03-deploy.md#6-down--destroy-everything-with-purge).
+`SUCCESS` is not confirmation — see
+[Lab 03 § 6](03-deploy.md#6-down--destroy-everything-with-purge). Neither, on its own, is
+`false`.
+
+> [!CAUTION]
+> **`azd down --force --purge` can delete the resource group and still leave the account
+> soft-deleted.** A second run of this lab produced no `SUCCESS` line at all:
+>
+> ```text
+> ERROR: deleting infrastructure: error deleting Azure resources: provisioning destroy failed: cognitive_account_purge: DELETE https://management.azure.com/subscriptions/<your-subscription-id>/providers/Microsoft.CognitiveServices/locations/eastus2/resourceGroups/rg-…/deletedAccounts/cog-…
+> RESPONSE 409: 409 Conflict
+> ERROR CODE: RequestConflict
+> ```
+>
+> The message is *"the resource entity provisioning state is not terminal"* — `azd` reached
+> the purge before Azure had finished deleting. At that moment `az group exists` returned
+> **`false`** while `az cognitiveservices account list-deleted` still listed the account. The
+> group check passes and the purge has failed. That is why the third command above exists.
+>
+> Recovery is to wait and purge by hand; it succeeded about three minutes later:
+>
+> ```bash
+> az cognitiveservices account purge -n cog-<random> -g rg-<your-resource-group> -l eastus2
+> ```
+>
+> A soft-deleted account holds its name and its quota. Leaving one behind is why a later
+> `provision` can fail for reasons that look unrelated.
+
+Both checks must agree — `false` **and** an empty list:
+
+<details>
+<summary>✅ Verified output — after the manual purge succeeded, 2026-08-13</summary>
+
+```text
+group exists: false
+soft-deleted accounts: 0
+[]
+```
+
+</details>
 
 ## ✅ Checkpoint
 
@@ -538,9 +629,11 @@ If you see something else, jump to *If that didn't work* below.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `ERROR: no project exists; to create a new project, run 'azd init'` | You are in the folder you made with `mkdir`, not the one `init` nested inside it. | `cd` into the folder named in `init`'s `Copying template code from local path to:` line. See [§ 1](#1-scaffold-the-tools-sample). |
-| `RESPONSE 404: SubscriptionNotFound` right after picking a subscription during `init` | The subscription the picker offered is not usable. Mechanism not established. | `azd env set AZURE_SUBSCRIPTION_ID <id>`, `azd env set AZURE_TENANT_ID <id>` and `azd env set AZURE_LOCATION <region>`. Setting only `AZURE_LOCATION`, as azd suggests, is not enough. |
+| `RESPONSE 404: SubscriptionNotFound` right after picking a subscription during `init` | The subscription the picker offered is not usable — check you did not pick a near-identically named sibling. Mechanism not established. | `azd env set AZURE_SUBSCRIPTION_ID <id>`, `azd env set AZURE_TENANT_ID <id>` and `azd env set AZURE_LOCATION <region>`. Setting only `AZURE_LOCATION`, as azd suggests, is not enough. |
+| `RESPONSE 404: NotFound / "Project not found"` from `azd deploy`, on a project that exists | Intermittent; seen once on an immediate redeploy. Cause not established. | Re-run `azd deploy` unchanged. It succeeded in 14 s. Confirm first with `az resource list -g <rg>` — if the project is listed, nothing is broken. See [§ 6](#6-deploy-it). |
+| `azd down` ends in `409 RequestConflict / provisioning state is not terminal` | `azd` reached the purge before Azure finished deleting. The group is gone; the account is soft-deleted. | Wait a few minutes, then `az cognitiveservices account purge -n cog-<random> -g rg-<name> -l <region>`. Verify with `az cognitiveservices account list-deleted` — `az group exists` returns `false` even while this is unresolved. See [§ 7](#7-clean-up). |
 | The agent never uses your tool | The name/description does not tell the model when to call it. | Make the docstring or C# description specific and action-oriented. Check what the model actually received in `gen_ai.tool.definitions` — see [§ 4](#4-run-locally). |
-| `RuntimeError: Model deployment name is not configured.` | `azd provision` did not set `AZURE_AI_MODEL_DEPLOYMENT_NAME`. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| `RuntimeError: Model deployment name is not configured.` | `init` was interrupted before its fifth question, so nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME`; `azd provision` never sets it. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
 | A harmless question like `2+2` calls the tool | The tool description is too broad — or the previous question is still in the session. | Narrow when the tool should be used, and retest with `--new-session --new-conversation`. |
 | You cannot tell whether the tool ran | `invoke` never shows tool calls. | Read the `azd ai agent run` terminal locally, or `azd ai agent monitor` after deploying. |
 | Tool works locally but not after deploy | You changed source but did not redeploy, or cloud identity differs. | Run `azd deploy`; check `azd ai agent show --output json`. |

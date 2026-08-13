@@ -63,7 +63,7 @@ Fifteen pages, grouped by what you are trying to do.
 | Runtimes | `python_3_13`, `python_3_14`, `dotnet_10` |
 | Protocols | `responses` ⭐, `invocations`, `invocations_ws`, `activity` |
 | CPU/memory tiers | `0.25/0.5Gi`, `0.5/1Gi`, `1/2Gi`, `2/4Gi` |
-| Resources created | 1 CognitiveServices account + 1 project |
+| Resources created | 1 CognitiveServices account + 1 project | **2** |
 | Verified timings | see the table below |
 
 ---
@@ -78,18 +78,18 @@ Every number here came from a real run against live Azure, then destroyed. Nothi
 > rather than a total — `Dataset generation (8m 35s)` plus `Evaluator generation (16 seconds)`,
 > summed here as 8m51s.
 
-| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` | Python catalog `01-basic` | Python catalog `02-tools` |
-|---|---|---|---|---|---|
-| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** | **2026-08-12** | **2026-08-13** |
-| `azd provision` | **1m20s** | **1m43s** | **1m34s** | **1m24s** | **1m21s** |
-| `azd deploy` | **2m21s** | **3m1s** | **2m41s** | **2m3s** | **2m22s** (redeploy of unchanged code: **12s**) |
-| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) | **14.995s** (first byte 7.830s) | **22.053s** (first byte 7.722s) |
-| First `invoke --local` | — | — | — | **9.518s** (first byte 9.517s) | **11.863s** (first byte 11.863s) |
-| `azd ai agent eval generate` | — | — | **8m51s** | — | — |
-| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed | — | — |
-| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** | **1m46s** | **3m51s** |
-| Resources created | **2** | **2** | **2** | **2** | **2** |
-| RG-scope role assignments | **0** | **0** | **0** | **0** | not measured |
+| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` | Python catalog `01-basic` | Python catalog `02-tools` | Python catalog `02-tools` re-run |
+|---|---|---|---|---|---|---|
+| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** | **2026-08-12** | **2026-08-13** | **2026-08-13** (2nd) |
+| `azd provision` | **1m20s** | **1m43s** | **1m34s** | **1m24s** | **1m21s** | **1m16s** |
+| `azd deploy` | **2m21s** | **3m1s** | **2m41s** | **2m3s** | **2m22s** (redeploy of unchanged code: **12s**) | **2m6s** (redeploy: 404, retry **14s**) |
+| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) | **14.995s** (first byte 7.830s) | **22.053s** (first byte 7.722s) | **20.555s** (first byte 7.296s) |
+| First `invoke --local` | — | — | — | **9.518s** (first byte 9.517s) | **11.863s** (first byte 11.863s) | **6.915s** (first byte 6.915s) |
+| `azd ai agent eval generate` | — | — | **8m51s** | — | — | — |
+| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed | — | — | — |
+| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** | **1m46s** | **3m51s** | **failed (409)**, purged by hand |
+| Resources created | **2** | **2** | **2** | **2** | **2** | **2** |
+| RG-scope role assignments | **0** | **0** | **0** | **0** | not measured | not measured |
 
 The 2026-08-12 column is a **reproducibility re-run** on a byte-identical toolchain (`azd 1.30.0`,
 all five extensions unchanged), following [Lab 02](../tutorial/02-first-agent.md) and
@@ -115,6 +115,17 @@ with a tool-calling agent, run interactively and captured through a pty. Its `in
 are the slowest in the table because the request makes two model round-trips instead of one,
 and the first one paid a container cold start. The tool itself took **0.000173 s**.
 
+The **re-run** column is that same lab walked again from an empty directory on the same day
+and the same toolchain, to check the page rather than the product. Every timing landed within
+noise, and the tool-call evidence — the `gen_ai.tool.definitions` attribute, the
+`finish_reasons` distribution, the span-dump structure — reproduced exactly. Two things did
+not, and both are now documented in the lab: an `azd deploy` of unchanged code failed once
+with `404 / Project not found` against a project that demonstrably existed, and
+`azd down --force --purge` failed at the purge step with `409 RequestConflict`, deleting the
+resource group but leaving the account soft-deleted. **`az group exists` returned `false`
+while that was still true**, which is why the lab now checks
+`az cognitiveservices account list-deleted` as well.
+
 **Teardown timing is the one number you should not trust to a single run.** Provision and
 deploy have held within a few seconds across every run in this table; `azd down --force --purge`
 has been measured at **1m46s, 2m4s, 2m21s and 2m40s** — a 50% spread — because it waits on
@@ -126,11 +137,11 @@ Container mode was measured separately — it is the outlier:
 
 | | Code mode (default) | Container mode |
 |---|---|---|
-| `azd provision` | **1m20s** | **2m39s** — roughly double |
-| `azd deploy` | 2m21s | **2m40s** |
-| First `invoke` | 14.242s | **11.399s** |
-| `azd down --force --purge` | 1m46s | **2m5s** |
-| Resources created | **2** | **3** (adds a **Premium** ACR) |
+| `azd provision` | **1m20s** | **2m39s** — roughly double | **1m16s** |
+| `azd deploy` | 2m21s | **2m40s** | **2m6s** (redeploy: 404, retry **14s**) |
+| First `invoke` | 14.242s | **11.399s** | **20.555s** (first byte 7.296s) |
+| `azd down --force --purge` | 1m46s | **2m5s** | **failed (409)**, purged by hand |
+| Resources created | **2** | **3** (adds a **Premium** ACR) | **2** |
 | Role assignments | 0 | **1** — `AcrPull`, at *ACR* scope |
 
 What to take from this:
