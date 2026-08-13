@@ -126,6 +126,31 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Re-checking Lab 04's own verified blocks against the stored captures found four blocks
+  the previous entry had silently altered.** The claim *"this was captured from a real run"*
+  had never been checked mechanically, only asserted. Stripping terminal control sequences
+  and nothing else, then requiring every remaining line of a `✅ Verified` block to appear
+  verbatim in a capture file, showed:
+  - **Two log blocks had their timestamps removed** — § 4's tool call in the `run` log and
+    § 6's the same call in `monitor`. The timestamps are restored, and they turn out to
+    carry the argument: `,656` → `,658` → `,660` → `,670` is the model asking, the Python
+    running and the answer returning, which is what the surrounding prose claims.
+  - **§ 4 also presented five non-adjacent log lines as if they were consecutive.** Two
+    OpenTelemetry span dumps — `chat gpt-5.4-mini` (47 lines) and `execute_tool get_weather`
+    (39 lines) — sit between them. The omission is now stated in the `<summary>`, which is
+    what [`AGENTS.md`](AGENTS.md) rule 1 requires of a shortened block.
+  - **§ 4's `gen_ai.tool.definitions` block had been un-escaped for readability.** The
+    attribute really arrives as `"[{\"type\": \"function\", …}]"` — JSON inside a JSON
+    string, because an OpenTelemetry attribute holds a string. The verified block is now the
+    raw form; the readable form is kept beside it and labelled as derived from it, not as a
+    separate capture.
+  - **§ 6's `monitor` lines carry two clocks nine hours apart** — `22:00:19` is `monitor`
+    stamping in local time, `13:00:19` is the container logging in UTC. Removing the inner
+    timestamp had hidden this; a reader correlating by time rather than by `trace-id` would
+    have been misled.
+  - **§ 7's `az group exists` → `false` had never been captured to a file.** It has been now,
+    against the same resource group, which is still absent. It is also split into its own
+    `<details>`: it was sharing a `<summary>` that described the `azd down` run instead.
 - **Walking Lab 04 on live Azure found the least-verified page in the repo, and closed a
   question Lab 02 had recorded as unexplained.** [`04-add-tools.md`](docs/tutorial/04-add-tools.md)
   carried exactly **one** output block for the whole lab, and it was labelled *illustrative*.

@@ -281,20 +281,26 @@ Next:
 The proof is in the **first** terminal, the one running `azd ai agent run`:
 
 <details>
-<summary>✅ Verified output — the tool call as it appears in the <code>run</code> log, 2026-08-13</summary>
+<summary>✅ Verified output — the tool call as it appears in the <code>run</code> log, 2026-08-13 (the OpenTelemetry span dumps that sit between these lines are omitted — see the note below)</summary>
 
 ```text
-INFO agent_framework: {'role': 'assistant', 'parts': [{'type': 'tool_call', 'id': 'call_qZlqhTYT5Y0uWBIHSaHHcNsd', 'name': 'get_weather', 'arguments': '{"location":"Tokyo"}'}]}
-INFO agent_framework: Function name: get_weather
-INFO agent_framework: Function get_weather succeeded.
-INFO agent_framework: Function duration: 0.001342s
-INFO agent_framework: {'role': 'tool', 'parts': [{'type': 'tool_call_response', 'id': 'call_qZlqhTYT5Y0uWBIHSaHHcNsd', 'response': 'The weather in Tokyo is cloudy with a high of 14°C.'}]}
+2026-08-13 21:49:18,656 INFO agent_framework: {'role': 'assistant', 'parts': [{'type': 'tool_call', 'id': 'call_qZlqhTYT5Y0uWBIHSaHHcNsd', 'name': 'get_weather', 'arguments': '{"location":"Tokyo"}'}]}
+2026-08-13 21:49:18,658 INFO agent_framework: Function name: get_weather
+2026-08-13 21:49:18,659 INFO agent_framework: Function get_weather succeeded.
+2026-08-13 21:49:18,660 INFO agent_framework: Function duration: 0.001342s
+2026-08-13 21:49:18,670 INFO agent_framework: {'role': 'tool', 'parts': [{'type': 'tool_call_response', 'id': 'call_qZlqhTYT5Y0uWBIHSaHHcNsd', 'response': 'The weather in Tokyo is cloudy with a high of 14°C.'}]}
 ```
 
 </details>
 
 `Function duration: 0.001342s`. The tool is **not** what makes the request slow; the model
 round-trips are. That is worth remembering before you optimise a tool.
+
+> [!NOTE]
+> **Those five lines are not adjacent in the log.** Between them sit two OpenTelemetry span
+> dumps — `chat gpt-5.4-mini` (47 lines) and `execute_tool get_weather` (39 lines). The
+> millisecond timestamps are the thread to pull: `,656` is the model asking, `,658`–`,660`
+> is your Python running, `,670` is the answer going back.
 
 The same log carries the exact JSON the model was shown, which is § 2's table as data rather
 than as a claim:
@@ -303,10 +309,18 @@ than as a claim:
 <summary>✅ Verified output — the <code>gen_ai.tool.definitions</code> span attribute, 2026-08-13</summary>
 
 ```text
-gen_ai.tool.definitions: [{"type": "function", "name": "get_weather", "description": "Get the weather for a given location.", "parameters": {"properties": {"location": {"description": "The location to get the weather for.", "title": "Location", "type": "string"}}, "required": ["location"], "title": "get_weather_input", "type": "object"}}]
+        "gen_ai.tool.definitions": "[{\"type\": \"function\", \"name\": \"get_weather\", \"description\": \"Get the weather for a given location.\", \"parameters\": {\"properties\": {\"location\": {\"description\": \"The location to get the weather for.\", \"title\": \"Location\", \"type\": \"string\"}}, \"required\": [\"location\"], \"title\": \"get_weather_input\", \"type\": \"object\"}}]",
 ```
 
 </details>
+
+It arrives doubly escaped because an OpenTelemetry attribute holds a *string*, so the whole
+schema is JSON inside JSON. Decoded — this block is derived from the one above, not a separate
+capture — it reads:
+
+```json
+[{"type": "function", "name": "get_weather", "description": "Get the weather for a given location.", "parameters": {"properties": {"location": {"description": "The location to get the weather for.", "title": "Location", "type": "string"}}, "required": ["location"], "title": "get_weather_input", "type": "object"}}]
+```
 
 Your docstring is the `description`. Your `Field(description=…)` is the parameter
 `description`. Nothing else about your function reaches the model.
@@ -425,14 +439,22 @@ evidence moves to `monitor` — and the `Trace ID` above is how you find it:
 <summary>✅ Verified output — the same tool call, in <code>azd ai agent monitor</code>, 2026-08-13</summary>
 
 ```text
-22:00:19  stderr   INFO agent_framework: {'role': 'assistant', 'parts': [{'type': 'tool_call', 'id': 'call_kIrF5aUqa0S3HCZsFbb8Bi05', 'name': 'get_weather', 'arguments': '{"location":"Osaka"}'}]}
-22:00:19  stderr   INFO agent_framework: Function name: get_weather
-22:00:19  stderr   INFO agent_framework: Function get_weather succeeded.
-22:00:19  stderr   INFO agent_framework: Function duration: 0.000173s
-22:00:26  stderr   INFO azure.ai.agentserver: Inbound POST /responses completed with status 200 in 15158.4ms (x-request-id: 06398239f93b448e3e5043c212a09aff, …)
+22:00:19  stderr   2026-08-13 13:00:19,961 INFO agent_framework: {'role': 'assistant', 'parts': [{'type': 'tool_call', 'id': 'call_kIrF5aUqa0S3HCZsFbb8Bi05', 'name': 'get_weather', 'arguments': '{"location":"Osaka"}'}]}
+22:00:19  stderr   2026-08-13 13:00:19,962 INFO agent_framework: Function name: get_weather
+22:00:19  stderr   2026-08-13 13:00:19,962 INFO agent_framework: Function get_weather succeeded.
+22:00:19  stderr   2026-08-13 13:00:19,962 INFO agent_framework: Function duration: 0.000173s
+22:00:19  stderr   2026-08-13 13:00:19,966 INFO agent_framework: {'role': 'tool', 'parts': [{'type': 'tool_call_response', 'id': 'call_kIrF5aUqa0S3HCZsFbb8Bi05', 'response': 'The weather in Osaka is cloudy with a high of 13°C.'}]}
+22:00:26  stderr   2026-08-13 13:00:26,063 INFO azure.ai.agentserver: Inbound POST /responses completed with status 200 in 15158.4ms (x-request-id: 06398239f93b448e3e5043c212a09aff, x-ms-client-request-id: 86debe2f-c0ef-4789-bade-a25b75dbd26d, trace-id: 06398239f93b448e3e5043c212a09aff)
 ```
 
 </details>
+
+The `trace-id` on the last line is the `Trace ID` the client printed. That is the join.
+
+> [!NOTE]
+> **Every line carries two clocks and they are nine hours apart.** `22:00:19` is `monitor`
+> stamping the line in your local timezone; `13:00:19` is the container logging in UTC. Match
+> on the `trace-id`, not on the time.
 
 > [!NOTE]
 > **Two numbers here do not agree, and both are correct.** The client reported 22.053 s; the
@@ -455,7 +477,7 @@ az group exists -n <your-resource-group>
 ```
 
 <details>
-<summary>✅ Verified output — 3 min 51 s, 2026-08-13 (progress lines elided; see the note)</summary>
+<summary>✅ Verified output — 3 min 51 s, 2026-08-13 (the repeated progress lines are collapsed to one each — see the note; resource names shortened to <code>rg-…</code> / <code>cog-…</code>)</summary>
 
 ```text
 Deleting all resources and deployed code on Azure (azd down)
@@ -468,6 +490,11 @@ Purging soft-deleted Cognitive Services account cog-…
 
 SUCCESS: Your application was removed from Azure in 3 minutes 51 seconds.
 ```
+
+</details>
+
+<details>
+<summary>✅ Verified output — <code>az group exists</code> after the purge, 2026-08-13</summary>
 
 ```text
 false
