@@ -97,6 +97,16 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Verified
 
+- **Lab 04 walked a third time, 2026-08-14, driven end-to-end by an agent rather than a
+  human.** Every timing landed within noise, `gen_ai.tool.definitions` reproduced
+  **byte-for-byte** against the previous walk's capture, and the `finish_reasons` distribution
+  came out identical for the third time running (1 × `tool_calls`, 6 × `stop`, one
+  `Function name: get_weather`). Torn down and confirmed with both checks. Two limits are
+  worth recording: **`azd` refused to prompt** — *"Continuing because `--no-prompt` was
+  specified"*, with no such flag, under a real pty and under `script -qec` alike — so § 1's
+  interactive questions could **not** be re-verified from this run and still rest on the
+  human-driven capture; and only `invoke` output matched a human's capture escape-for-escape,
+  so nothing spinner-driven from this run was promoted.
 - **Lab 04 walked a second time from an empty directory, 2026-08-13.** Same day, same
   toolchain (`azd 1.30.0`, all five extensions unchanged), following the corrected page rather
   than this repository's samples, with thirteen predictions registered *before* the first live
@@ -136,6 +146,38 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **A third Lab 04 walk, driven end-to-end by an agent, found six more defects — and one of
+  them was mine.**
+  - **The re-run column added in the previous entry went into the wrong table.** It was
+    appended to *Container mode* in `docs/reference/README.md`, giving a three-column header
+    four columns of data and captioning Lab 04 timings as container-mode measurements.
+    Reverted, and put in *Verified runs* where it belongs.
+  - **§ 5 *Add your own tool* had never been run.** It was the only instruction in the lab
+    with no evidence behind it. Applying its `get_stock_price` snippet verbatim works: the
+    model calls it with `{"symbol":"MSFT"}`, and `gen_ai.tool.definitions` then carries both
+    tools. Both are now verified blocks, and the section says what it did not before — that
+    **`azd ai agent run` has no reload flag**, so the server must be restarted or you keep
+    testing the old code.
+  - **The troubleshooting table listed an error this lab cannot produce.**
+    `RuntimeError: Model deployment name is not configured.` belongs to *Lab 02's* sample,
+    which raises it explicitly. Lab 04's sample raises
+    `ValueError: Model is required. Set via 'model' parameter or 'FOUNDRY_MODEL' environment
+    variable.` — measured by running it with the variable unset. The mechanism is now
+    documented too: `azure.yaml` maps the variable through as
+    `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, so the container gets an **empty string**, not
+    nothing, which is why it is never a `KeyError`.
+  - **`azd ai agent doctor` does not catch that missing value.** It reports `(✓) manual env
+    vars set` and the same `7 passed, 1 failed, 5 skipped` either way. § 3 sent readers to
+    `doctor` without saying so.
+  - **Counting environment values is not a reliable way to tell a finished `init` from an
+    interrupted one.** The previous entry claimed 11 versus 5. An `init` that completes
+    *without prompting* leaves **6**, with a different key set again. The discriminator is the
+    presence of `AZURE_AI_MODEL_DEPLOYMENT_NAME`, and the page now says that instead.
+  - **`azd ai agent show` has no `tools` key** — asserted before, verified now, with the
+    actual `definition` key list as the evidence.
+  - **The two-clocks note assumed your offset puts `monitor` ahead of the container.** Across
+    midnight UTC it is behind, and the two stamps disagree on the date: `07:20:23` beside
+    `2026-08-13 22:20:23`. `monitor`'s stamp carries no date to warn you.
 - **Walking Lab 04 a second time, from an empty directory, found five more defects — three of
   them only reachable on the path that works.** The first walk hit
   `SubscriptionNotFound` during `init` and recovered by setting environment variables by hand.

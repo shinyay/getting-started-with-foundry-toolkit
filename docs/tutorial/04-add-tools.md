@@ -109,9 +109,14 @@ entirely (remove from azure.yaml)**.
 The `Next:` block is azd telling you what this page's § 3 assumes: **`cd` into the folder
 `init` created.** `init` also writes a random 8-character salt, `AZD_RESOURCE_TOKEN_SALT`, and
 derives the resource-group name from it **before contacting Azure at all** — see
-[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources). A completed `init` leaves
-**11** values in the environment; an `init` you interrupted leaves 5, which is a quick way to
-tell the two apart.
+[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
+
+> [!TIP]
+> **To tell a finished `init` from an interrupted one, look for
+> `AZURE_AI_MODEL_DEPLOYMENT_NAME` in `azd env get-values`** — only the fifth question writes
+> it. Do not count the values: a run of these five questions leaves 11, an interrupted one 5,
+> and an `init` that completed *without prompting* — azd skips the questions when it decides
+> the terminal is not interactive — leaves 6, with a different set of keys again.
 
 ### 2. Inspect the tool definition
 
@@ -262,6 +267,12 @@ runs, which is the third confirmation of the naming rule in
 never sets it — but § 1's fifth question already did, because this lab does not pass
 `--no-prompt`. Check rather than assume: `azd env get-values | grep MODEL_DEPLOYMENT`.
 
+> [!WARNING]
+> **`doctor` will not catch it if that value is missing.** Run with the variable unset,
+> `doctor` still reports `(✓) manual env vars set` and the same `7 passed, 1 failed,
+> 5 skipped` — the failure surfaces later, in § 4, when the agent process starts. The `grep`
+> above is the check that works.
+
 ### 4. Run locally
 
 ```bash
@@ -388,7 +399,8 @@ The Inspector view was not verified for this lab.
 
 ### 5. Add your own tool
 
-Python:
+Python — put the function beside `get_weather`, above `main()`, and add it to the `tools=[…]`
+list already there:
 
 ```python
 @tool(approval_mode="never_require")
@@ -415,6 +427,48 @@ tools:
 ]
 ```
 
+> [!IMPORTANT]
+> **Restart `azd ai agent run` — it does not reload.** `azd ai agent run --help` describes it
+> as starting the server *"in the foreground. Press Ctrl+C to stop"*, and offers no watch or
+> reload flag. Edit while it is running and you will keep testing the old code.
+
+Then ask for the new tool. The Python addition above was applied verbatim and run:
+
+```bash
+azd ai agent invoke --local --new-session --new-conversation "What did MSFT close at?"
+```
+
+<details>
+<summary>✅ Verified output — Python, after adding <code>get_stock_price</code>, 2026-08-14 (the <code>Next:</code> block that follows is elided)</summary>
+
+```text
+Target:       localhost:8088 (local)
+Message:      "What did MSFT close at?"
+Session:      d47a5f5f-8e5f-4ad4-bcc3-971f1b5677ce
+Conversation: 6184936d-3921-4af5-aa8c-0aabfd2074a9
+
+[local] MSFT closed at **$432.10**.
+
+Server responded in 5.085s (first byte: 5.085s)
+```
+
+</details>
+
+The `run` terminal shows the same five-line shape as § 4, with the new name, and
+`gen_ai.tool.definitions` now carries **both** tools — which is the check that your function
+actually reached the model:
+
+<details>
+<summary>✅ Verified output — the <code>run</code> log after adding the second tool, 2026-08-14 (the span dumps between these lines are omitted, as in § 4)</summary>
+
+```text
+2026-08-14 07:15:00,572 INFO agent_framework: {'role': 'assistant', 'parts': [{'type': 'tool_call', 'id': 'call_byGM4AOeKBs8rKOY9CpGqo6f', 'name': 'get_stock_price', 'arguments': '{"symbol":"MSFT"}'}]}
+2026-08-14 07:15:00,574 INFO agent_framework: Function name: get_stock_price
+2026-08-14 07:15:00,575 INFO agent_framework: Function get_stock_price succeeded.
+```
+
+</details>
+
 Rules that matter:
 
 1. **Return a string** or something trivially serializable — it goes back into the prompt.
@@ -431,15 +485,27 @@ azd ai agent monitor
 ```
 
 Tools run **inside your container** — same code, same process. Nothing is registered with
-Foundry, so there is no extra tool deployment step. `azd ai agent show` is the evidence:
-the deployed definition has **no tools field at all**, only identity, version and endpoints.
+Foundry, so there is no extra tool deployment step. `azd ai agent show --output json` is the
+evidence: the deployed definition has **no `tools` key anywhere in it**. Check it on your own
+deployment with
 
-Deploy took **2 min 22 s** on the first run and **2 min 6 s** on a second. Redeploying
-unchanged code afterwards took **12 s** / **14 s** and left `Version` at `1`.
+```bash
+azd ai agent show <your-agent-name> --output json | grep -c '"tools"'
+```
+
+which returns `0`. What the `definition` object does carry is only how to build and run your
+container — this list is derived from that JSON, not printed by azd in this form:
+
+```text
+code_configuration, container_protocol_versions, cpu, environment_variables, kind, memory, protocol_versions
+```
+
+Deploy took **2 min 22 s**, **2 min 6 s** and **2 min 12 s** across three runs. Redeploying
+unchanged code afterwards took **12 s**, **14 s** and **15 s**, and left `Version` at `1`.
 
 > [!WARNING]
 > **A redeploy immediately after the first deploy can fail with `Project not found` — and the
-> project is fine.** One of two runs produced this 9 s after starting, against a project that
+> project is fine.** One of three runs produced this 9 s after starting, against a project that
 > `az resource list`, `azd ai agent show` and a working remote `invoke` all confirmed existed:
 >
 > ```text
@@ -454,7 +520,8 @@ unchanged code afterwards took **12 s** / **14 s** and left `Version` at `1`.
 > ```
 >
 > Re-running `azd deploy` unchanged succeeded in 14 s. **Retry before you diagnose.** The
-> other run redeployed first time, so this is intermittent and its cause was not established.
+> other two runs redeployed first time, so this is intermittent and its cause was not
+> established.
 
 The remote invoke prints two things the local one does not — a server-assigned session and a
 `Trace ID`:
@@ -505,8 +572,11 @@ The `trace-id` on the last line is the `Trace ID` the client printed. That is th
 
 > [!NOTE]
 > **Every line carries two clocks and they are nine hours apart.** `22:00:19` is `monitor`
-> stamping the line in your local timezone; `13:00:19` is the container logging in UTC. Match
-> on the `trace-id`, not on the time.
+> stamping the line in your local timezone; `13:00:19` is the container logging in UTC. The
+> offset is your own, and across midnight UTC the two even disagree on the **date** — a later
+> run logged `07:20:23` beside a container stamp of `2026-08-13 22:20:23`. `monitor`'s stamp
+> carries no date at all, so there is nothing on the line to warn you. Match on the
+> `trace-id`, not on the time.
 
 > [!NOTE]
 > **Two numbers here do not agree, and both are correct.** The client reported 22.053 s; the
@@ -632,8 +702,9 @@ If you see something else, jump to *If that didn't work* below.
 | `RESPONSE 404: SubscriptionNotFound` right after picking a subscription during `init` | The subscription the picker offered is not usable — check you did not pick a near-identically named sibling. Mechanism not established. | `azd env set AZURE_SUBSCRIPTION_ID <id>`, `azd env set AZURE_TENANT_ID <id>` and `azd env set AZURE_LOCATION <region>`. Setting only `AZURE_LOCATION`, as azd suggests, is not enough. |
 | `RESPONSE 404: NotFound / "Project not found"` from `azd deploy`, on a project that exists | Intermittent; seen once on an immediate redeploy. Cause not established. | Re-run `azd deploy` unchanged. It succeeded in 14 s. Confirm first with `az resource list -g <rg>` — if the project is listed, nothing is broken. See [§ 6](#6-deploy-it). |
 | `azd down` ends in `409 RequestConflict / provisioning state is not terminal` | `azd` reached the purge before Azure finished deleting. The group is gone; the account is soft-deleted. | Wait a few minutes, then `az cognitiveservices account purge -n cog-<random> -g rg-<name> -l <region>`. Verify with `az cognitiveservices account list-deleted` — `az group exists` returns `false` even while this is unresolved. See [§ 7](#7-clean-up). |
+| Your new tool from § 5 is ignored, and the log never names it | `azd ai agent run` starts the server in the foreground and has no reload flag, so it is still running the code you had when you started it. | Ctrl+C and re-run `azd ai agent run --no-client`. Confirm with `gen_ai.tool.definitions` — it should now list both tools. See [§ 5](#5-add-your-own-tool). |
 | The agent never uses your tool | The name/description does not tell the model when to call it. | Make the docstring or C# description specific and action-oriented. Check what the model actually received in `gen_ai.tool.definitions` — see [§ 4](#4-run-locally). |
-| `RuntimeError: Model deployment name is not configured.` | `init` was interrupted before its fifth question, so nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME`; `azd provision` never sets it. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| `ValueError: Model is required. Set via 'model' parameter or 'FOUNDRY_MODEL' environment variable.` | Nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME` — § 1's fifth question did not run, and `azd provision` never sets it. `azure.yaml` maps the variable through as `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, so the container receives an **empty string** rather than nothing, which is why this is a `ValueError` from the client and not a `KeyError`. `doctor` does not catch it. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then `azd ai agent run` again. |
 | A harmless question like `2+2` calls the tool | The tool description is too broad — or the previous question is still in the session. | Narrow when the tool should be used, and retest with `--new-session --new-conversation`. |
 | You cannot tell whether the tool ran | `invoke` never shows tool calls. | Read the `azd ai agent run` terminal locally, or `azd ai agent monitor` after deploying. |
 | Tool works locally but not after deploy | You changed source but did not redeploy, or cloud identity differs. | Run `azd deploy`; check `azd ai agent show --output json`. |
