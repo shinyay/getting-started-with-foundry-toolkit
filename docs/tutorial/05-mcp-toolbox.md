@@ -37,6 +37,14 @@ azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/
 Local sample READMEs: [Python](../../samples/python/03-mcp-toolbox/) and
 [C#](../../samples/csharp/03-mcp-toolbox/).
 
+> [!IMPORTANT]
+> **`init` nests a folder named after the sample — `cd` into it before anything else.** The
+> `mkdir` above is not where `azure.yaml` lands. Read the
+> `Copying template code from local path to:` line in your own output for the name, then `cd`
+> into it and confirm with `ls azure.yaml`. Running `azd provision` from the outer folder fails
+> with `ERROR: no project exists; to create a new project, run 'azd init'`. Full explanation in
+> [Lab 02 § 2](02-first-agent.md#2-init--scaffold).
+
 ### 2. Inspect the Python toolbox code
 
 External tools make the server async because tool connections are I/O-bound.

@@ -72,10 +72,18 @@ https://portal.azure.com/#@/resource/subscriptions/<your-subscription-id>/resour
 
 > [!NOTE]
 > **That table is live — the `Duration` column counts up and the row is rewritten in place.**
-> Redirect the same command to a file and you get one line per step instead
-> (`hello-world: Deploying (Polling agent status (1/30)) [57s]` and so on). Neither form is
-> wrong; they are the same run rendered for different destinations. A failure renders in the
-> same table, with `✗` and `Failed`.
+> While it runs the header reads `Service · Phase · Elapsed · Detail`; the final frame above is
+> the summary azd leaves behind. Somewhere that cannot render cursor movement you get one line
+> per step instead (`hello-world: Deploying (Polling agent status (1/30)) [57s]` and so on).
+> Neither form is wrong; they are the same run rendered for different destinations. A failure
+> renders in the same table, with `✗` and `Failed`.
+>
+> A redirect always produces the per-step form — but **a pty does not always produce the
+> table.** The same command captured through `script -qec '…' /dev/null` from a process with no
+> controlling terminal produced per-step lines, and still did so after the pty was given an
+> explicit size with `stty rows 40 cols 200`. Why is not established. If you are capturing to
+> compare against this block, confirm the capture actually contains escape sequences before
+> trusting it.
 
 > [!CAUTION]
 > **Three of those lines carry identifiers.** The playground URL embeds a tenant identifier
@@ -466,8 +474,10 @@ SUCCESS: Your application was removed from Azure in 2 minutes 4 seconds.
 > **That really is the whole output.** While it runs, `azd` rewrites a progress line in place
 > — `Listing Cognitive Services accounts in rg-…`, `Deleting model deployment …`,
 > `Purging soft-deleted Cognitive Services account …` — and none of it survives to the end.
-> Redirect the command to a file and you keep every one of those lines. Teardown timing varies
-> widely: 1 m 46 s, 2 m 4 s, 2 m 21 s and 2 m 40 s across four measured runs.
+> A capture that cannot render cursor movement keeps every one of those lines; one measured
+> teardown wrote `Deleting resource group … (this can take several minutes)` **37** times.
+> Teardown timing varies widely: 1 m 46 s, 2 m 4 s, 2 m 21 s, 2 m 40 s and 3 m 51 s across five
+> measured runs.
 
 Teardown is not finished because the command said `SUCCESS`. Verify it:
 

@@ -281,16 +281,22 @@ command that fixes it.
 
 **It reads a project, and you do not have one yet.** `azd ai agent init` in
 [Lab 02](02-first-agent.md) creates the first one. So this section teaches you to *read*
-`doctor`; there are six states you will actually see, each in a different place:
+`doctor`; there are seven states you will actually see, each in a different place:
 
 | Output | Where you can actually get it |
 |---|---|
 | `1 passed, 1 failed, 11 skipped` — outside any project | the [Checkpoint](#-checkpoint) at the end of this lab |
 | `4 passed, 1 failed, 8 skipped` — project, but no environment selected | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
-| `6 passed, 1 failed, 6 skipped` — scaffolded, before `provision` | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
+| `6 passed, 1 failed, 6 skipped` — scaffolded, before `provision`, **with `--local-only`** | [Lab 02 § 4](02-first-agent.md#4-doctor--check-before-you-spend-money) |
+| `7 passed, 1 failed, 5 skipped` — the same point **without** `--local-only` | [Lab 04 § 3](04-add-tools.md#3-provision-and-set-the-model-name) |
 | `9 passed, 1 failed, 3 skipped` — endpoint set, project unreachable | [Lab 03 troubleshooting](03-deploy.md#-if-that-didnt-work) |
 | `10 passed, 1 failed, 2 skipped` — provisioned, before `deploy` | [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources) |
 | `11 passed, 0 failed, 2 skipped` — all green | [Lab 03 § 4](03-deploy.md#4-doctor--check-local-and-remote-state) |
+
+> [!TIP]
+> **Two of those rows are the same moment in the lifecycle.** The only difference is
+> `--local-only`, which turns the five network checks into skips. Before you compare your
+> counts against this table, check which flag you used.
 
 How to read any `doctor` run:
 
@@ -298,9 +304,12 @@ How to read any `doctor` run:
    `--local-only` skips the five network ones.
 2. **Every failure carries a `fix:` line with the exact command.** That is what makes `doctor`
    better than reading a stack trace.
-3. **Skips cascade from failures.** A failed check turns everything downstream of it into a
-   *skip*, not a failure. Always fix the topmost `(x)` first — the ones below it are usually
-   not real problems. The Checkpoint below shows **one** failure producing **11** skips.
+3. **Skips come in three kinds, and the reason is always in the line.** *Not applicable*
+   (`no toolbox resources declared…`), *cascading from a failure above* (`see check
+   local.project-endpoint-set`), and *missing prerequisite* (`AZURE_AI_PROJECT_ID is not set in
+   the current azd environment.`). Only the second kind clears itself when you fix the topmost
+   `(x)`, so always fix that first — the Checkpoint below shows **one** failure producing
+   **11** skips.
 4. **A red `(x)` is not always wrong.** Before `azd provision`, `FOUNDRY_PROJECT_ENDPOINT`
    cannot exist. "Ready" means the Local group is clean *apart from the checks that depend on
    resources you have not created yet*.

@@ -97,6 +97,12 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Verified
 
+- **Lab 04 walked end-to-end on live Azure, 2026-08-13.** `init` (interactive) → `doctor` →
+  `provision` → local `run` → two local `invoke`s → `deploy` → remote `invoke` → `show` →
+  `monitor` → `down --force --purge`, torn down and confirmed with `az group exists` → `false`.
+  Timings are in the [Verified runs table](docs/reference/README.md#verified-runs). This was the
+  first lab walked with the *tool-calling* sample rather than the basic one, which is what
+  exposed the tool-call evidence gap below. The Agent Inspector timeline was **not** verified.
 - **Labs 01–03 re-run end-to-end on live Azure, 2026-08-12.** Provision → run → local invoke →
   deploy → show → remote invoke → doctor → `down --purge`, then torn down; teardown confirmed
   independently with `az group exists` and `az cognitiveservices account list-deleted` rather
@@ -120,6 +126,80 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Fixed
 
+- **Walking Lab 04 on live Azure found the least-verified page in the repo, and closed a
+  question Lab 02 had recorded as unexplained.** [`04-add-tools.md`](docs/tutorial/04-add-tools.md)
+  carried exactly **one** output block for the whole lab, and it was labelled *illustrative*.
+  Every section now carries a verified capture. The defects, in the order a reader hits them:
+  - **§ 1 lost the reader before Azure was ever touched.** It said `mkdir 02-tools && cd
+    02-tools`, then `init`, then — in § 3 — `azd provision`, with no `cd` into the folder
+    `init` nests. Verified by running it: the Python command creates
+    `agent-framework-agent-with-local-tools-responses/`, and `azd provision` from the outer
+    folder fails with `ERROR: no project exists; to create a new project, run 'azd init'`.
+    [Lab 02 § 2](docs/tutorial/02-first-agent.md) teaches this explicitly, so the page
+    contradicted its own prerequisite. [Lab 05](docs/tutorial/05-mcp-toolbox.md) § 1 had the
+    identical defect and is fixed with it.
+  - **§ 1's command has no `--no-prompt`, so `init` asks four questions the page never showed.**
+    The first — *Select a Foundry project to host your agent…* — appears nowhere in the
+    tutorial, because Lab 02 uses `--no-prompt` and prints a different tail entirely.
+  - **`3. All tenants` can offer a subscription Azure then refuses.** Picking one produced
+    `RESPONSE 404 / SubscriptionNotFound`, and azd's own `Suggestion:` (set `AZURE_LOCATION`)
+    does not recover it — the bad subscription is already in the environment. Now a warning in
+    § 1 and a row in the troubleshooting table, with the mechanism marked *not established*.
+  - **The lab's central claim was never evidenced: you cannot see a tool call.** A tool-backed
+    answer and an invented one are the same shape in `invoke` output — no marker, no timing
+    breakdown, nothing. The evidence is in the `azd ai agent run` terminal locally and in
+    `azd ai agent monitor` after deploying, and both are now shown. `Function duration:
+    0.001342s` local / `0.000173s` remote makes the point that the tool is never the slow part.
+  - **§ 2's mapping table is now data rather than a claim.** The `gen_ai.tool.definitions`
+    span attribute is the literal JSON the model receives, showing the Python docstring
+    arriving as `description` and `Field(description=…)` as the parameter description.
+  - **`invoke` is stateful, and the lab's own Exercise was affected.** Two separately issued
+    invokes printed the same `Session:` and `Conversation:`, and the server log replayed the
+    first exchange as input to the second. `evidence/help/invoke.txt` documents this; no lab
+    mentioned it. The Exercise now uses `--new-session --new-conversation`, and its answer is
+    backed by a measurement: one `finish_reasons: ["tool_calls"]` against six `["stop"]`, with
+    `Function name: get_weather` appearing exactly once across three invokes.
+  - **§ 6's "nothing is registered with Foundry" now has its evidence.** `azd ai agent show`
+    returns no tools field at all. Redeploying unchanged code took **12 s** against 2 m 22 s
+    for the first deploy, and left `Version` at `1`.
+  - **§ 7 had no teardown verification.** `az group exists` → `false` is added, matching
+    [Lab 03 § 6](docs/tutorial/03-deploy.md).
+- **A seventh `doctor` state existed and was in no table.** `7 passed, 1 failed, 5 skipped` is
+  what a reader gets running plain `azd ai agent doctor` after scaffolding — the documented
+  `6 passed, 1 failed, 6 skipped` is that same lifecycle point run with `--local-only`, which
+  [Lab 01 § 7](docs/tutorial/01-setup.md) did not say. Both rows are now qualified.
+- **Skips come in three kinds, not two.** Lab 03 established *not applicable* versus
+  *cascading from a failure*. A third appeared: `Developer has required role on Foundry
+  project -- skipped (AZURE_AI_PROJECT_ID is not set in the current azd environment.)` — a
+  missing prerequisite, which does **not** clear when you fix the topmost `(x)`.
+  [Lab 01 § 7](docs/tutorial/01-setup.md) said only that skips cascade.
+- **The resource-group hash suffix is explained.** [Lab 02 § 5](docs/tutorial/02-first-agent.md)
+  recorded it as observed-but-unestablished. `azd ai agent init` writes a random 8-character
+  `AZD_RESOURCE_TOKEN_SALT` and derives `AZURE_RESOURCE_GROUP` from it; `azd env new` writes
+  none, which is why `rg-lab03-verify` has no suffix. Proven twice over: cancelling `init` at
+  its first prompt left an environment holding exactly three values — salt, environment name,
+  and the group name built from both — and two consecutive inits produced `21507901` then
+  `aa8a1e14` with the group name following each time. **The group name is decided before Azure
+  is contacted at all.**
+- **The naming rule confirmed a third time, by prediction.** A 51-character environment name
+  was registered before provisioning with the predicted project
+  `agent-framework-agent-with-local` — its first 32 characters, a cut that lands mid-word so no
+  other candidate string produces it. Exact match.
+- **A claim shipped earlier in this same release was too strong, and is corrected.** Lab 03 and
+  the entry below said azd's per-step deploy lines "only exist in a redirected capture". They do
+  not: a `script -qec '…' /dev/null` capture — a real pty, `test -t 1` true — produced the
+  per-step form, and still did after the pty was given an explicit size with `stty rows 40 cols
+  200`. The user-side capture of the same command contains **514** escape sequences; the
+  agent-side one contains **9**. A redirect always degrades the output, but a pty does not
+  always preserve it, and the mechanism is not established. [`AGENTS.md`](AGENTS.md) rule 1 now
+  warns that a pty is necessary but not sufficient and gives the escape-sequence count as the
+  check.
+- **Two retractions from this walk, recorded because the reasoning was wrong, not the fix.**
+  A `SubscriptionNotFound` failure was attributed to a stale `AZURE_TENANT_ID`; testing showed
+  azd had written exactly the tenant `az account show` reports, so the hypothesis is withdrawn
+  and the mechanism left open. Separately, the generic `To fix:` / `Review the fix: notes
+  above` block was reported as undocumented; it is already in
+  [Lab 02 § 4](docs/tutorial/02-first-agent.md). Neither reached the docs.
 - **Walking Lab 03 on live Azure found eleven defects, and disproved a rule this repo had been
   repeating.** The page said the Foundry project name was random, and [Lab 02](docs/tutorial/02-first-agent.md)
   — corrected earlier in this same release — said it came from the *service* name. Both were

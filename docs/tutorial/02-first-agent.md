@@ -436,9 +436,15 @@ are `agent-framework-agent-basic-resp`. Verified by prediction: an environment n
 `lab03-verify` produces the project `lab03-verify` and the group `rg-lab03-verify`.
 
 > [!NOTE]
-> Some groups get an extra suffix — this run's was `rg-…-dev-b02cc1f1`, while `rg-lab03-verify`
-> got none. The suffix is stable across `provision`/`down`/`provision` of the same environment.
-> When it is added is not documented here because it has not been established.
+> **The suffix is a random salt, written by `init` before Azure is ever contacted.**
+> `azd ai agent init` puts an 8-character `AZD_RESOURCE_TOKEN_SALT` in the environment and
+> derives `AZURE_RESOURCE_GROUP` as `rg-<AZURE_ENV_NAME>-<salt>`; `azd env new` writes no salt,
+> which is why `rg-lab03-verify` has none. Verified by cancelling `init` at its first prompt:
+> the environment already held exactly three values — the salt, the environment name and the
+> group name built from both — and a later `provision` created that exact group. Two
+> consecutive `init` runs of the same sample produced `21507901` then `aa8a1e14`, with the group
+> name following each time. The salt is stable across `provision`/`down`/`provision` of one
+> environment.
 
 Provision writes the Foundry coordinates back into your environment — `azd env get-values`
 printed **24** values after this step. The one that matters:

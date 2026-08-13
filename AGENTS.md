@@ -27,8 +27,12 @@ are in. Content that does the wrong job for its layer belongs in a different lay
    **Capture through a pty — `script -qec '…' /dev/null`, never `>`.** azd's terminal output
    and its redirected output differ *in both directions*: a redirect drops the `Next:` guidance
    blocks entirely and adds spinner lines a reader never sees. Five wrong blocks in
-   `docs/tutorial/` came from redirect captures. Do not hand-wrap, re-indent or elide lines
-   inside a verified block; if you must shorten one, say so in the `<summary>`.
+   `docs/tutorial/` came from redirect captures. **A pty is necessary but not sufficient:**
+   `script` propagates no window size when it is run from a process with no controlling
+   terminal, and captures made that way still linearise azd's live tables. Before trusting a
+   capture, confirm it contains escape sequences (`grep -c $'\033' file`) — a `deploy` capture
+   with 9 of them is the degraded form; the real one had 514. Do not hand-wrap, re-indent or
+   elide lines inside a verified block; if you must shorten one, say so in the `<summary>`.
 2. **Respect the layer.** A command the reader types does not belong in `learn/`. An
    explanation of *why* does not belong in `tutorial/` — link to `learn/` instead. A
    narrative walkthrough does not belong in `reference/`.
