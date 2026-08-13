@@ -34,6 +34,13 @@ azd ai agent init -m "https://github.com/microsoft-foundry/foundry-samples/blob/
 The local samples in this repo are here if you want to inspect them before scaffolding:
 [Python](../../samples/python/02-tools/) and [C#](../../samples/csharp/02-tools/).
 
+> [!NOTE]
+> **Every verified block on this page is from the Python track.** The lab has been walked
+> end-to-end against live Azure three times, always in Python. The C# commands and code below
+> are read from the sample source and have **not** been run, so treat them as illustrative:
+> the shape is right, but no output on this page came from a C# run. §§ 3, 6 and 7 are
+> language-agnostic and apply to both.
+
 > [!IMPORTANT]
 > **`init` nests a folder named after the sample, and every later command must run inside it.**
 > The Python command above produced
@@ -478,6 +485,9 @@ Rules that matter:
 
 ### 6. Deploy it
 
+Stop the local `azd ai agent run` first — Ctrl+C in that terminal. Nothing below needs it, and
+leaving it running holds port 8088.
+
 ```bash
 azd deploy
 azd ai agent invoke "What's the weather in Osaka?"
@@ -668,7 +678,9 @@ soft-deleted accounts: 0
 
 ## ✅ Checkpoint
 
-You should now be able to run a local invoke that asks for the tool:
+**Check this at the end of § 4, not here** — by the time you have run § 7 the Foundry project
+is gone and the local agent cannot start. With `azd ai agent run --no-client` up in the first
+terminal, this is what the second one should show:
 
 ```bash
 azd ai agent invoke --local "What's the weather in Tokyo?"
@@ -692,6 +704,11 @@ Server responded in 11.863s (first byte: 11.863s)
 
 The `Next:` block that follows it is terminal-only and elided here.
 
+An answer alone is not the checkpoint — [§ 4](#4-run-locally) explains why a made-up answer
+looks identical. The lab has worked only if the **first** terminal also logged
+`Function name: get_weather`. And, as in [Lab 03](03-deploy.md#-checkpoint), it is finished
+only once § 7's two teardown checks both agree.
+
 If you see something else, jump to *If that didn't work* below.
 
 ## 🔧 If that didn't work
@@ -713,9 +730,11 @@ Everything else: [troubleshooting](../reference/troubleshooting.md).
 
 ## ✏️ Exercise
 
-Change only the tool description/docstring, not the tool code. Predict whether this prompt
-should call the tool: `What is 2+2?` Then run it and compare — in a clean session, or the
-previous question is still in context:
+Do this **while you still have § 4's setup running**, before § 7 tears it down. Change only
+the tool description/docstring, not the tool code, and **restart `azd ai agent run`** — it
+does not reload ([§ 5](#5-add-your-own-tool)). Predict whether this prompt should call the
+tool: `What is 2+2?` Then run it and compare — in a clean session, or the previous question is
+still in context:
 
 ```bash
 azd ai agent invoke --local --new-session --new-conversation "What is 2+2?"
@@ -730,7 +749,9 @@ agent calls the tool, the description is too broad; describe the external fact t
 
 Measured with the sample's own description, unchanged: `What is 2+2?` produced
 `finish_reasons: ["stop"]` and no `Function name:` line, both with the weather question still
-in the session and in a clean `--new-session --new-conversation` run.
+in the session and in a clean `--new-session --new-conversation` run. That held on three
+separate walks. **The edited-description half of this exercise has not been measured** — the
+prediction above is reasoning, not a captured result.
 </details>
 
 ## → Next

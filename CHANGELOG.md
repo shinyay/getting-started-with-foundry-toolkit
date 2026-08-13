@@ -178,6 +178,15 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   - **The two-clocks note assumed your offset puts `monitor` ahead of the container.** Across
     midnight UTC it is behind, and the two stamps disagree on the date: `07:20:23` beside
     `2026-08-13 22:20:23`. `monitor`'s stamp carries no date to warn you.
+  - **Reading the page as a tutorial rather than as a set of claims found three more
+    problems.** The ✅ Checkpoint asked for a local invoke, but sits *after* § 7 has destroyed
+    the project and stopped the agent — it was not runnable where it stood, and it now says
+    where to check it and what actually counts as passing. The Exercise had the same ordering
+    problem and did not mention the restart. And § 6 never told anyone to stop the local
+    server.
+  - **The page never admitted the C# track is unverified.** Every ✅ block on it is Python;
+    the C# commands and code are read from the sample and have never been run. § 1 now says
+    so, rather than leaving a C# reader to assume the evidence covers them.
 - **Walking Lab 04 a second time, from an empty directory, found five more defects — three of
   them only reachable on the path that works.** The first walk hit
   `SubscriptionNotFound` during `init` and recovered by setting environment variables by hand.
