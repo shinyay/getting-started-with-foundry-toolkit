@@ -107,6 +107,46 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Verified
 
+- **Lab 04's C# track walked live for the first time, 2026-08-14.** The page has presented two
+  tracks side by side since it was written, but every verified block on it came from Python;
+  § 2's mapping table described C# from *reading* the sample, not from running it. A full
+  lifecycle — init, provision, run, invoke, deploy, show, remote invoke, teardown — closes
+  that for §§ 1–4, 6 and 7. § 5's C# fragment is still unrun and is now labelled illustrative
+  rather than sitting silently beside verified Python output. The lifecycle itself proved
+  language-neutral (provision **1m39s**, deploy **2m24s**,
+  local invoke **9.020s**, remote **9.587s**, down **2m36s**, all inside the Python spread) and
+  the `doctor` output was **byte-identical to the Python block, all 30 lines**. Four
+  predictions were written down before the first live command; three held, one did not, and
+  one of the three was right for the wrong reason. What was not language-neutral is now in the
+  lab:
+  - **.NET's `DefaultAzureCredential` treats an IMDS timeout as fatal**, not as "credential
+    unavailable", so it never falls through to `az login` the way Python's does. On a laptop
+    or under WSL the local run burns 100 s and dies with
+    `ManagedIdentityCredential authentication failed`. `AZURE_TOKEN_CREDENTIALS=dev` fixes it;
+    deployed agents were never affected. This is the single biggest difference between the two
+    tracks and the page said nothing about it.
+  - **The sample's `?? "gpt-4o"` fallback is unreachable.** `azure.yaml` expands an unset
+    `AZURE_AI_MODEL_DEPLOYMENT_NAME` to an empty string, and `??` tests for null — so C# throws
+    `System.ArgumentException: Argument is whitespace (Parameter 'model')` where Python throws
+    `ValueError: Model is required`. One root cause, two messages, both now in the
+    troubleshooting table. The lab's claim that this track *"does not need"* the variable set
+    was wrong and has been replaced.
+  - **`gen_ai.tool.definitions` is Python-only.** The C# server logs no equivalent, so the two
+    troubleshooting rows that tell you to read it back are now marked as having no C#
+    counterpart. The tool itself was called and answered — the arguments to
+    `AIFunctionFactory.Create` do reach the model; you simply cannot see what was sent.
+  - **The project-naming rule was tested on its other side.** Python's 51-character
+    environment name had shown truncation at 32; C#'s 15-character one came through untouched.
+    The rule truncates — it does not pad, hash or rename. The two scaffold folder names also
+    come from **different sources**: Python's from the upstream sample directory, C#'s from the
+    `name:` field in the sample's `azure.yaml`.
+- **The pty rule is now per-command rather than blanket.** Counting cursor-movement escapes
+  across one human-driven walk and two agent-driven ones shows the degradation is a property
+  of the command, not a matter of degree: `doctor`, `show` and `invoke` draw no live UI and
+  their captures are **identical** either way, while `init` (1463 → 0), `provision` (488 → 0),
+  `deploy` (768 → 0) and `down` (665 → 0) lose theirs completely. Recorded in
+  [`docs/reference/README.md`](docs/reference/README.md); it is why the C# walk promoted its
+  `doctor` and `invoke` output and nothing else.
 - **Lab 04 walked a third time, 2026-08-14, driven end-to-end by an agent rather than a
   human.** Every timing landed within noise, `gen_ai.tool.definitions` reproduced
   **byte-for-byte** against the previous walk's capture, and the `finish_reasons` distribution

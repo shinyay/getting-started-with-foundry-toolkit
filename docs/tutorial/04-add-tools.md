@@ -35,20 +35,25 @@ The local samples in this repo are here if you want to inspect them before scaff
 [Python](../../samples/python/02-tools/) and [C#](../../samples/csharp/02-tools/).
 
 > [!NOTE]
-> **Every verified block on this page is from the Python track.** The lab has been walked
-> end-to-end against live Azure three times, always in Python. The C# commands and code below
-> are read from the sample source and have **not** been run, so treat them as illustrative:
-> the shape is right, but no output on this page came from a C# run. §§ 3, 6 and 7 are
-> language-agnostic and apply to both.
+> **Both tracks have now been walked against live Azure — Python three times, C# once, on
+> 2026-08-14.** The C# walk covered §§ 1–4, 6 and 7: it provisioned, ran locally, deployed,
+> invoked and tore down successfully, and what it found is folded in below, including **two
+> failures that happen only in C#**. It did **not** cover § 5, whose C# fragment is still
+> illustrative. Blocks are labelled with the track they were captured from; where the same
+> bytes came out of both, the summary says so. §§ 3, 6 and 7 are language-agnostic — § 3's
+> `doctor` output came out **byte-identical on both tracks**.
 
 > [!IMPORTANT]
 > **`init` nests a folder named after the sample, and every later command must run inside it.**
 > The Python command above produced
-> `02-tools/agent-framework-agent-with-local-tools-responses/` — not `02-tools/`. Read the
-> `Copying template code from local path to:` line in your own output to get the name, then:
+> `02-tools/agent-framework-agent-with-local-tools-responses/` — not `02-tools/`. The C# one
+> produced `02-tools/local-tools/`. **The two names come from different places**: the Python
+> folder is named after the sample directory upstream, the C# folder after the `name:` field
+> in the sample's own `azure.yaml`. Do not derive one from the other — read the
+> `Copying template code from local path to:` line in your own output, then:
 >
 > ```bash
-> cd agent-framework-agent-with-local-tools-responses
+> cd <the folder that line names>
 > ls azure.yaml
 > ```
 >
@@ -182,6 +187,15 @@ static string GetAvailableHotels(
 }
 ```
 
+> [!CAUTION]
+> **The C# sample looks like it defaults to `gpt-4o`. It does not.** `Program.cs` reads
+> `Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-4o"`, but
+> `azure.yaml` declares that variable as `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, and azd
+> expands an unset variable to an **empty string** — which is not `null`, so `??` never fires.
+> Verified on 2026-08-14: the process dies with
+> `System.ArgumentException: Argument is whitespace (Parameter 'model')`. The fallback in the
+> source is unreachable under azd, so § 3's check applies to C# too.
+
 How the model learns what the tool does:
 
 | Source | Python | C# |
@@ -208,7 +222,7 @@ azd provision
 runs it with `--local-only`:
 
 <details>
-<summary>✅ Verified output — scaffolded, subscription and location set, before <code>provision</code>, 2026-08-13</summary>
+<summary>✅ Verified output — scaffolded, subscription and location set, before <code>provision</code>, 2026-08-13 (Python) and byte-identical on the C# walk, 2026-08-14 — all 30 lines</summary>
 
 ```text
 azd ai agent doctor
@@ -268,11 +282,26 @@ FOUNDRY_PROJECT_ENDPOINT="https://cog-<random>.services.ai.azure.com/api/project
 The environment name here is 51 characters; the project is `agent-framework-agent-with-local`
 — its first **32**. That was predicted before the run and matched exactly on two separate
 runs, which is the third confirmation of the naming rule in
-[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
+[Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources). The C# walk tested the
+other side of the rule for the first time: its environment is `local-tools-dev`, **15**
+characters, and the project came back as `local-tools-dev` in full. The rule truncates; it
+does not pad, hash or rename.
 
-**Unlike Lab 02, you do not have to set `AZURE_AI_MODEL_DEPLOYMENT_NAME`.** `provision` still
-never sets it — but § 1's fifth question already did, because this lab does not pass
-`--no-prompt`. Check rather than assume: `azd env get-values | grep MODEL_DEPLOYMENT`.
+**Whether you must set `AZURE_AI_MODEL_DEPLOYMENT_NAME` depends on how `init` went.** This
+lab does not pass `--no-prompt`, so § 1's fifth question normally sets it and `provision`
+never does. But if `init` could not prompt — it prints
+`Continuing because --no-prompt was specified` and lists the values it skipped — then nothing
+set it and § 4 will fail. Check rather than assume:
+
+```bash
+azd env get-values | grep MODEL_DEPLOYMENT
+```
+
+If that prints nothing, set it before going on:
+
+```bash
+azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
+```
 
 > [!WARNING]
 > **`doctor` will not catch it if that value is missing.** Run with the variable unset,
@@ -285,6 +314,21 @@ never sets it — but § 1's fifth question already did, because this lab does n
 ```bash
 azd ai agent run --no-client
 ```
+
+> [!CAUTION]
+> **C# only — start the server like this instead if you are not on an Azure VM:**
+>
+> ```bash
+> AZURE_TOKEN_CREDENTIALS=dev azd ai agent run --no-client
+> ```
+>
+> .NET's `DefaultAzureCredential` tries the instance metadata service first and treats its
+> **timeout** as a fatal error rather than "this credential is unavailable", so on a laptop or
+> under WSL it stops there instead of falling through to your `az login`. Verified on
+> 2026-08-14: the first invoke hung for 100 s, the second failed outright with
+> `ManagedIdentityCredential authentication failed`. Python's credential chain does fall
+> through, which is why only this track needs the variable — and only locally. The deployed
+> agent has a real managed identity and is unaffected.
 
 In a second terminal, ask for something that needs the tool.
 
@@ -319,6 +363,29 @@ Next:
 
   azd ai agent monitor --follow
   view logs after deploying
+```
+
+</details>
+
+C#, same question, on the walk that verified this track:
+
+<details>
+<summary>✅ Verified output — C#, 2026-08-14 (the remaining four hotels and the trailing <code>Next:</code> block are elided)</summary>
+
+```text
+Target:       localhost:8088 (local)
+Message:      "I need a hotel in Seattle for 2 guests next weekend."
+Session:      61e17e6a-2b2a-47aa-a066-88aa08383204
+Conversation: 3fe03f8c-3cc9-43e4-aa6c-a7e472dc0d11
+
+[local] Here are some great Seattle hotel options for **2 guests next weekend**:
+
+### Top options
+- **The Grand Seattle** — Downtown Seattle  
+  **$289/night** | **4.7/5** | 12 rooms available  
+  Amenities: Free WiFi, Pool, Spa, Restaurant, Fitness Center
+…
+Server responded in 9.020s (first byte: 9.016s)
 ```
 
 </details>
@@ -375,6 +442,15 @@ capture — it reads:
 
 Your docstring is the `description`. Your `Field(description=…)` is the parameter
 `description`. Nothing else about your function reaches the model.
+
+> [!NOTE]
+> **This visibility is Python-only.** The C# agent server logs nothing equivalent: on the
+> 2026-08-14 walk its `run` log contained no `gen_ai.tool.definitions` attribute and never
+> named `GetAvailableHotels`, while the Python log emitted the attribute three times. The
+> arguments to `AIFunctionFactory.Create` do reach the model — the tool was called and
+> answered — but in C# you cannot read back what the model was shown. Where the
+> troubleshooting table below says "check `gen_ai.tool.definitions`", that step has no C#
+> counterpart; compare behaviour instead.
 
 Then ask for something that should not use the tool:
 
@@ -438,6 +514,13 @@ tools:
 > **Restart `azd ai agent run` — it does not reload.** `azd ai agent run --help` describes it
 > as starting the server *"in the foreground. Press Ctrl+C to stop"*, and offers no watch or
 > reload flag. Edit while it is running and you will keep testing the old code.
+
+> [!NOTE]
+> **The C# fragment above is illustrative — it has not been run.** The 2026-08-14 C# walk
+> covered §§ 1–4, 6 and 7, but stopped short of adding a second tool, so unlike the Python
+> addition this one is written from the sample's shape rather than from a run. It is a
+> fragment, not a compilable file: `tools:` is the object-initialiser property, not a
+> statement. The Python path below is the one with captured output behind it.
 
 Then ask for the new tool. The Python addition above was applied verbatim and run:
 
@@ -722,6 +805,8 @@ If you see something else, jump to *If that didn't work* below.
 | Your new tool from § 5 is ignored, and the log never names it | `azd ai agent run` starts the server in the foreground and has no reload flag, so it is still running the code you had when you started it. | Ctrl+C and re-run `azd ai agent run --no-client`. Confirm with `gen_ai.tool.definitions` — it should now list both tools. See [§ 5](#5-add-your-own-tool). |
 | The agent never uses your tool | The name/description does not tell the model when to call it. | Make the docstring or C# description specific and action-oriented. Check what the model actually received in `gen_ai.tool.definitions` — see [§ 4](#4-run-locally). |
 | `ValueError: Model is required. Set via 'model' parameter or 'FOUNDRY_MODEL' environment variable.` | Nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME` — § 1's fifth question did not run, and `azd provision` never sets it. `azure.yaml` maps the variable through as `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, so the container receives an **empty string** rather than nothing, which is why this is a `ValueError` from the client and not a `KeyError`. `doctor` does not catch it. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then `azd ai agent run` again. |
+| **C#** — `System.ArgumentException: Argument is whitespace (Parameter 'model')`, thrown from `AsAIAgent` at `Program.cs` line 17 | The same empty string as the row above, reaching C# instead of Python. The sample's `?? "gpt-4o"` cannot save you: `??` tests for `null`, and an empty string is not null. Verified 2026-08-14. | Identical fix: `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then re-run. See [§ 2](#2-inspect-the-tool-definition). |
+| **C#** — `ManagedIdentityCredential authentication failed: All Managed Identity sources are unavailable … IMDSv2 probe failed` on every local `invoke` | Only on a machine with no Azure Instance Metadata Service — a laptop, or WSL. .NET's `DefaultAzureCredential` treats the IMDS **timeout** as a fatal error rather than "credential unavailable", so it stops instead of falling through to your `az login`. Python's does not, which is why only this track breaks. Costs 100 s before it fails. Deployed agents are unaffected: they have a real managed identity. | Restrict the chain to developer credentials for the local run only: `AZURE_TOKEN_CREDENTIALS=dev azd ai agent run --no-client`. Verified 2026-08-14 — the same invoke then answered in 9.020 s. |
 | A harmless question like `2+2` calls the tool | The tool description is too broad — or the previous question is still in the session. | Narrow when the tool should be used, and retest with `--new-session --new-conversation`. |
 | You cannot tell whether the tool ran | `invoke` never shows tool calls. | Read the `azd ai agent run` terminal locally, or `azd ai agent monitor` after deploying. |
 | Tool works locally but not after deploy | You changed source but did not redeploy, or cloud identity differs. | Run `azd deploy`; check `azd ai agent show --output json`. |
