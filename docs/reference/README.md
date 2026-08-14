@@ -78,18 +78,18 @@ Every number here came from a real run against live Azure, then destroyed. Nothi
 > rather than a total — `Dataset generation (8m 35s)` plus `Evaluator generation (16 seconds)`,
 > summed here as 8m51s.
 
-| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` | Python catalog `01-basic` | Python catalog `02-tools` | Python catalog `02-tools` re-run | Python catalog `02-tools` 3rd | C# catalog `02-tools` |
-|---|---|---|---|---|---|---|---|---|
-| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** | **2026-08-12** | **2026-08-13** | **2026-08-13** (2nd) | **2026-08-14** (3rd) | **2026-08-14** (C#) |
-| `azd provision` | **1m20s** | **1m43s** | **1m34s** | **1m24s** | **1m21s** | **1m16s** | **1m23s** | **1m39s** |
-| `azd deploy` | **2m21s** | **3m1s** | **2m41s** | **2m3s** | **2m22s** (redeploy of unchanged code: **12s**) | **2m6s** (redeploy: 404, retry **14s**) | **2m12s** (redeploy: **15s**) | **2m24s** |
-| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) | **14.995s** (first byte 7.830s) | **22.053s** (first byte 7.722s) | **20.555s** (first byte 7.296s) | **21.231s** (first byte 8.683s) | **9.587s** (first byte 3.960s) |
-| First `invoke --local` | — | — | — | **9.518s** (first byte 9.517s) | **11.863s** (first byte 11.863s) | **6.915s** (first byte 6.915s) | **9.196s** (first byte 9.196s) | **9.020s** (first byte 9.016s) |
-| `azd ai agent eval generate` | — | — | **8m51s** | — | — | — | — | — |
-| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed | — | — | — | — | — |
-| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** | **1m46s** | **3m51s** | **failed (409)**, purged by hand | **1m45s** | **2m36s** |
-| Resources created | **2** | **2** | **2** | **2** | **2** | **2** | **2** | not measured |
-| RG-scope role assignments | **0** | **0** | **0** | **0** | not measured | not measured | not measured | not measured |
+| | Python `01-hello-world` | C# `01-hello-world` | Python `04-eval` | Python catalog `01-basic` | Python catalog `02-tools` | Python catalog `02-tools` re-run | Python catalog `02-tools` 3rd | C# catalog `02-tools` | C# catalog `02-tools` 2nd |
+|---|---|---|---|---|---|---|---|---|---|
+| Date | 2026-08-08 | 2026-08-08 | **2026-08-09** | **2026-08-12** | **2026-08-13** | **2026-08-13** (2nd) | **2026-08-14** (3rd) | **2026-08-14** (C#) | **2026-08-14** (C# 2nd) |
+| `azd provision` | **1m20s** | **1m43s** | **1m34s** | **1m24s** | **1m21s** | **1m16s** | **1m23s** | **1m39s** | **1m24s** |
+| `azd deploy` | **2m21s** | **3m1s** | **2m41s** | **2m3s** | **2m22s** (redeploy of unchanged code: **12s**) | **2m6s** (redeploy: 404, retry **14s**) | **2m12s** (redeploy: **15s**) | **2m24s** | **2m13s** |
+| First `invoke` | **14.242s** (first byte 7.357s) | **6.877s** (first byte 3.622s) | **14.442s** (first byte 7.935s) | **14.995s** (first byte 7.830s) | **22.053s** (first byte 7.722s) | **20.555s** (first byte 7.296s) | **21.231s** (first byte 8.683s) | **9.587s** (first byte 3.960s) | **6.152s** (first byte 3.882s) |
+| First `invoke --local` | — | — | — | **9.518s** (first byte 9.517s) | **11.863s** (first byte 11.863s) | **6.915s** (first byte 6.915s) | **9.196s** (first byte 9.196s) | **9.020s** (first byte 9.016s) | **9.115s** (first byte 9.114s) |
+| `azd ai agent eval generate` | — | — | **8m51s** | — | — | — | — | — | — |
+| `azd ai agent eval run` | — | — | **3m43s** → 15 cases, 9 passed, 6 failed | — | — | — | — | — | — |
+| `azd down --force --purge` | **1m46s** | **1m45s** | **2m53s** | **1m46s** | **3m51s** | **failed (409)**, purged by hand | **1m45s** | **2m36s** | **4m1s** |
+| Resources created | **2** | **2** | **2** | **2** | **2** | **2** | **2** | not measured | not measured |
+| RG-scope role assignments | **0** | **0** | **0** | **0** | not measured | not measured | not measured | not measured | not measured |
 
 The 2026-08-12 column is a **reproducibility re-run** on a byte-identical toolchain (`azd 1.30.0`,
 all five extensions unchanged), following [Lab 02](../tutorial/02-first-agent.md) and
@@ -125,6 +125,13 @@ uncaptured tutorial block — `invoke --local` — and corrected four claims; se
 > either way; `init` (1463 → 0), `provision` (488 → 0), `deploy` (768 → 0) and `down` (665 → 0)
 > lose theirs entirely. **Captures of those four from an agent must not back a verified
 > block**; the other three may.
+>
+> **A pty is still not a faithful transcript for `monitor`.** Its output is streamed through
+> the caller's terminal width, so long lines are broken **mid-token** — a 2026-08-14 capture
+> split `traceparent:` across two lines as `traceparen` / `t: ,`. It also interleaves its own
+> `status` lines out of chronological order, printing a `15:51:05` line among `15:48:17` ones.
+> Neither is an artefact you may silently repair: quote the wrap as captured, or say in the
+> `<summary>` that lines were rejoined.
 
 The 2026-08-13 column is the [Lab 04](../tutorial/04-add-tools.md) walk — the same lifecycle
 with a tool-calling agent, run interactively and captured through a pty. Its `invoke` numbers
@@ -171,9 +178,9 @@ was not run on that walk; teardown was confirmed with `az group exists` and
 `az cognitiveservices account list-deleted` instead.
 
 **Teardown timing is the one number you should not trust to a single run.** Provision and
-deploy have held within a few seconds across every run in this table; the eight completed
-`azd down --force --purge` runs recorded on this page span **1m45s to 3m51s** — the slowest is
-more than twice the fastest — and a ninth did not complete at all, failing at the purge step
+deploy have held within a few seconds across every run in this table; the nine completed
+`azd down --force --purge` runs recorded on this page span **1m45s to 4m1s** — the slowest is
+more than twice the fastest — and one more did not complete at all, failing at the purge step
 with `409 RequestConflict`. It waits on resource-group deletion and a Cognitive Services purge,
 neither of which is under `azd`'s control. Budget for four minutes, and confirm with
 `az group exists` **and** `az cognitiveservices account list-deleted` rather than trusting the

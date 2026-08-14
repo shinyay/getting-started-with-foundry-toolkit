@@ -606,6 +606,10 @@ Things worth noticing:
 > serves `POST /responses` and publishes no OpenAPI document, so the path cannot work. The CLI
 > proves it one line earlier: it probes that URL at startup and logs its own `404`. Use
 > `azd ai agent invoke --local` or the Inspector instead.
+>
+> **It is the protocol, not the language.** The C# server does the same thing — on
+> 2026-08-14 it logged `Inbound GET /invocations/docs/openapi.json failed HTTP 404 in 19ms`
+> at startup and then printed the same `curl` tip, and a manual `curl` returned `HTTP 404`.
 
 > [!CAUTION]
 > **The agent prints OpenTelemetry spans and metrics as JSON on stdout.** In a captured run,

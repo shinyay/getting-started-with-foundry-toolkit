@@ -35,13 +35,13 @@ The local samples in this repo are here if you want to inspect them before scaff
 [Python](../../samples/python/02-tools/) and [C#](../../samples/csharp/02-tools/).
 
 > [!NOTE]
-> **Both tracks have now been walked against live Azure — Python three times, C# once, on
-> 2026-08-14.** The C# walk covered §§ 1–4, 6 and 7: it provisioned, ran locally, deployed,
-> invoked and tore down successfully, and what it found is folded in below, including **two
-> failures that happen only in C#**. It did **not** cover § 5, whose C# fragment is still
-> illustrative. Blocks are labelled with the track they were captured from; where the same
-> bytes came out of both, the summary says so. §§ 3, 6 and 7 are language-agnostic — § 3's
-> `doctor` output came out **byte-identical on both tracks**.
+> **Both tracks have now been walked against live Azure — Python three times, C# twice, on
+> 2026-08-13 and 2026-08-14.** The second C# walk covered **every section, §§ 1–7**, which
+> retired the last instruction in this repo that had never been run: § 5's C# fragment is now
+> captured output, not a sketch. What both walks found is folded in below, including **three
+> failures that happen only in C#**. Blocks are labelled with the track they were captured
+> from; where the same bytes came out of both, the summary says so. §§ 3, 6 and 7 are
+> language-agnostic — § 3's `doctor` output came out **byte-identical on both tracks**.
 
 > [!IMPORTANT]
 > **`init` nests a folder named after the sample, and every later command must run inside it.**
@@ -62,7 +62,8 @@ The local samples in this repo are here if you want to inspect them before scaff
 > [Lab 02 § 2](02-first-agent.md#2-init--scaffold), which explains it in full.
 
 Unlike Lab 02, this command has no `--no-prompt`, so `init` **asks five questions** before it
-finishes. The first one has no equivalent anywhere in Lab 02:
+finishes — provided your terminal is one azd will prompt in. The first one has no equivalent
+anywhere in Lab 02:
 
 <details>
 <summary>✅ Verified output — the interactive tail of <code>init</code>, 2026-08-13 (subscription name and ID elided; the list bodies each question scrolls through are omitted)</summary>
@@ -102,6 +103,27 @@ Answer **Create a new Foundry project** to follow this lab; **Use an existing Fo
 reuses the one Lab 03 left behind, if you kept it. Answer **Deploy as specified in azure.yaml**
 to the fifth; the other two options are **Choose a different model** and **Skip this model
 entirely (remove from azure.yaml)**.
+
+> [!WARNING]
+> **In VS Code's integrated terminal azd asks none of the five — silently.** Instead of the
+> questions you get this, on a command that passes no such flag:
+>
+> ```text
+> Missing Azure environment values: AZURE_SUBSCRIPTION_ID, AZURE_LOCATION. Continuing because --no-prompt was specified.
+> ```
+>
+> Verified 2026-08-14 by running the identical command in both terminals on one machine within
+> ten minutes: Windows Terminal prompted, VS Code's integrated terminal did not. It reproduced
+> on **both** the Python and the C# sample, **with and without** `script`, and it is not a
+> plain tty test — `isatty` is true on all three descriptors in both, and `TERM` is
+> `xterm-256color` in both. The mechanism was not established; `TERM_PROGRAM=vscode` and
+> `VSCODE_INJECTION=1` are the only environment differences found. **Run `init` from a
+> standalone terminal**, or recover by hand — § 3 tells you what to check and what to set.
+
+> [!TIP]
+> **The first question's default has moved.** On 2026-08-14 the highlighted option was
+> **Use an existing Foundry project**, not the **Create a new Foundry project** this lab wants.
+> Arrow down before you press Enter. The block above records the answer, not the default.
 
 > [!IMPORTANT]
 > **The fifth question sets `AZURE_AI_MODEL_DEPLOYMENT_NAME` for you**, which is why § 3 below
@@ -370,7 +392,7 @@ Next:
 C#, same question, on the walk that verified this track:
 
 <details>
-<summary>✅ Verified output — C#, 2026-08-14 (the remaining four hotels and the trailing <code>Next:</code> block are elided)</summary>
+<summary>✅ Verified output — C#, 2026-08-14 (the remaining four hotels and the trailing <code>Next:</code> block are elided; the heading, the ordering and the wording all vary between runs)</summary>
 
 ```text
 Target:       localhost:8088 (local)
@@ -452,6 +474,46 @@ Your docstring is the `description`. Your `Field(description=…)` is the parame
 > troubleshooting table below says "check `gen_ai.tool.definitions`", that step has no C#
 > counterpart; compare behaviour instead.
 
+**C# does give you one signal, but it counts rather than names.** Every response the local
+server finishes is logged with an `OutputCount`, and a tool round-trip makes it larger — the
+`function_call` and its result are outputs too:
+
+<details>
+<summary>✅ Verified output — C#, the same local <code>run</code>, four responses, 2026-08-14 (each entry is the two lines the ASP.NET Core console logger writes; the requests between them are omitted)</summary>
+
+```text
+info: Azure.AI.AgentServer.Responses.Internal.ResponseEndpointHandler[0]
+      Response caresp_c500cb759cb7290e00Fk9CinhRALSFlDEAp3e5OVGDAHEOTy4h completed: Status=Completed OutputCount=3
+info: Azure.AI.AgentServer.Responses.Internal.ResponseEndpointHandler[0]
+      Response caresp_cc3006d9dda7f0aa00YSDPGQoiyBMOvnV1S7DjK7nMlGz9dJqi completed: Status=Completed OutputCount=1
+info: Azure.AI.AgentServer.Responses.Internal.ResponseEndpointHandler[0]
+      Response caresp_89202b9f83a2a80e00DtuCtYljOS89uE8Q1Xw3bqjcUeoN0OBZ completed: Status=Completed OutputCount=1
+info: Azure.AI.AgentServer.Responses.Internal.ResponseEndpointHandler[0]
+      Response caresp_c2ebd44178da1f6b00h2iMSZQqY1CBw7hU1Ijq87t5gyQOYlTT completed: Status=Completed OutputCount=3
+```
+
+</details>
+
+Read against what was asked, on one server without restarting it:
+
+| Question | `OutputCount` | Server time |
+|---|---|---|
+| "I need a hotel in Seattle for 2 guests next weekend." | **3** | 9101 ms |
+| "Reply with exactly the word: pong" | **1** | 6989 ms |
+| the same, with `--new-conversation` | **1** | 2903 ms |
+| "What is the total room rate for The Grand Seattle for 3 nights?" | **3** | 5960 ms |
+
+> [!WARNING]
+> **`OutputCount` has two limits, and both bite.** It does not say *which* tool ran — the
+> fourth row above scored 3 while running the **wrong**, stale tool, which is § 5's whole
+> lesson. And it does not exist remotely at all: the hosted server runs `Streaming=True` and
+> logs `SSE stream completed for response caresp_…` with no count. Treat it as a smoke
+> detector, not as proof.
+
+Rows two and three are also the honest version of the latency claim above. Both asked the same
+question and both used no tool, but the second carried the hotel answer as history and took
+**4086 ms longer for it**. Compare 9101 ms against 2903 ms, not against 6989 ms.
+
 Then ask for something that should not use the tool:
 
 ```bash
@@ -471,6 +533,11 @@ azd ai agent invoke --local "What is 2+2?"
 > ```
 >
 > It also costs you: every invoke re-sends the accumulated history.
+>
+> **`--new-conversation` alone was enough.** On the C# walk it changed the `Conversation:` the
+> client printed while the `Session:` stayed `248ef2c7-…`, and the identical question dropped
+> from 6989 ms to 2903 ms — the history was no longer replayed. Whether `--new-session` alone
+> also clears it was not tested.
 
 Across the whole local `run` — three invokes, seven model turns — the log recorded
 `finish_reasons: ["tool_calls"]` **once** and `["stop"]` six times, and
@@ -516,13 +583,14 @@ tools:
 > reload flag. Edit while it is running and you will keep testing the old code.
 
 > [!NOTE]
-> **The C# fragment above is illustrative — it has not been run.** The 2026-08-14 C# walk
-> covered §§ 1–4, 6 and 7, but stopped short of adding a second tool, so unlike the Python
-> addition this one is written from the sample's shape rather than from a run. It is a
-> fragment, not a compilable file: `tools:` is the object-initialiser property, not a
-> statement. The Python path below is the one with captured output behind it.
+> **The C# fragment above was applied verbatim and run on 2026-08-14.** It goes in two places:
+> the `AIFunctionFactory.Create(…)` line joins the existing `tools:` collection initialiser
+> (note the comma the first entry now needs), and `GetRoomRate` becomes a local function
+> beside `GetAvailableHotels`, after `app.Run()`. `dotnet build` reported **0 Warning(s),
+> 0 Error(s)**. It is still a fragment rather than a file: `tools:` is the object-initialiser
+> property, not a statement.
 
-Then ask for the new tool. The Python addition above was applied verbatim and run:
+Then ask for the new tool. Both additions above were applied verbatim and run.
 
 ```bash
 azd ai agent invoke --local --new-session --new-conversation "What did MSFT close at?"
@@ -559,7 +627,57 @@ actually reached the model:
 
 </details>
 
-Rules that matter:
+**C#** — the same question, on a server that was **not** restarted after the edit:
+
+```bash
+azd ai agent invoke --local --new-conversation "What is the total room rate for The Grand Seattle for 3 nights?"
+```
+
+<details>
+<summary>✅ Verified output — C#, after editing <code>Program.cs</code> but <strong>before</strong> restarting <code>run</code>, 2026-08-14 (the <code>Next:</code> block that follows is elided; wording varies between runs)</summary>
+
+```text
+Target:       localhost:8088 (local)
+Message:      "What is the total room rate for The Grand Seattle for 3 nights?"
+Session:      248ef2c7-8902-4f6c-8df3-5ec84693ce26
+Conversation: c47324db-4d35-4f78-b826-ab43d27ca3aa
+
+[local] The Grand Seattle is **$289 per night**.  
+For **3 nights**, the total room rate is **$867**.
+
+Server responded in 5.967s (first byte: 5.966s)
+```
+
+</details>
+
+Then Ctrl+C the `run` terminal, start it again, and ask exactly the same thing:
+
+<details>
+<summary>✅ Verified output — C#, the same question after restarting <code>run</code>, 2026-08-14 (the <code>Next:</code> block that follows is elided; wording varies between runs)</summary>
+
+```text
+Target:       localhost:8088 (local)
+Message:      "What is the total room rate for The Grand Seattle for 3 nights?"
+Session:      248ef2c7-8902-4f6c-8df3-5ec84693ce26
+Conversation: c604eee8-2fa1-4e35-b68a-71e17eb7c86e
+
+[local] The total room rate for **The Grand Seattle** for **3 nights** is **$630**.
+
+Server responded in 5.153s (first byte: 5.149s)
+```
+
+</details>
+
+> [!CAUTION]
+> **Read those two blocks together — they are the same command, and the restart is the only
+> thing that changed.** $867 is $289 × 3, from `GetAvailableHotels`' listing price. $630 is
+> $210 × 3, from the new `GetRoomRate`. The stale run did not error, did not warn and did not
+> say which tool it used; it did the arithmetic on the wrong data and returned a confident,
+> plausible number. This is what the IMPORTANT above costs you when you skip it.
+>
+> **And `OutputCount` will not save you.** Both runs logged `OutputCount=3` — a tool ran in
+> both cases; it was simply the wrong one. Verify against a value only the new tool can
+> produce, as the $630/$867 split does here.
 
 1. **Return a string** or something trivially serializable — it goes back into the prompt.
 2. **Raise or throw informative exceptions.** The model sees the error and can retry or explain.
@@ -678,7 +796,60 @@ The `trace-id` on the last line is the `Trace ID` the client printed. That is th
 > Part of the 7.722 s to first byte is a container cold start — `monitor` shows the process
 > booting *after* the invoke was issued.
 
-Add `-f` to follow the log live instead of dumping what has accumulated:
+**C# looks different, and the difference is not a fault.** The join works — but there are no
+tool lines to join to:
+
+<details>
+<summary>✅ Verified output — C#, <code>azd ai agent monitor</code> for the same remote invoke, 2026-08-14 (the two lines of the "SSE stream started" entry, then the whole streaming body — Azure.Identity token-cache chatter and Foundry storage calls — omitted down to the request's last six lines)</summary>
+
+```text
+15:58:52  stdout   info: Azure.AI.AgentServer.Responses.Internal.ResponseEndpointHandler[0]
+15:58:52  stdout         SSE stream started for response caresp_7bb458b1c241168900BbsgEEOsKYlWh00RJqTL4IamRunM3Yhk
+15:58:57  stdout   info: Azure.AI.AgentServer.Responses.Internal.ResponseEndpointHandler[0]
+15:58:57  stdout         SSE stream completed for response caresp_7bb458b1c241168900BbsgEEOsKYlWh00RJqTL4IamRunM3Yhk
+15:58:57  stdout   info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+15:58:57  stdout         Executed endpoint 'HTTP: POST /responses'
+15:58:57  stdout   info: Azure.AI.AgentServer.Core.Internal.InboundRequestLoggingMiddleware[194824245]
+15:58:57  stdout         Inbound POST /responses completed HTTP 200 in 4777ms (x-request-id: 254afc1d281ec15343bc8f351a9d4b0f, x-ms-client-request-id: 34f49b44-a047-4364-aa59-f00c6dc208ed, trace-id: 254afc1d281ec15343bc8f351a9d4b0f)
+```
+
+</details>
+
+The `trace-id` join is identical, so the technique in the timezone note above transfers
+unchanged. What does not transfer is everything in between.
+
+> [!IMPORTANT]
+> **The hosted C# agent logs nothing about tools, and `OutputCount` is gone too.** `monitor`
+> streams the container's stdout and stderr, and Python's tool lines reach it because the
+> `agent_framework` **logger** writes them — that is why the Python block above tags them
+> `stderr`. The C# server has no equivalent logger call, so there is nothing to stream. The
+> local `OutputCount` signal from § 4 also disappears: hosted responses run `Streaming=True`
+> and end with `SSE stream completed`, which carries no count. On this walk, three remote
+> invokes produced three `HTTP 200`s and **no** line naming `GetRoomRate` or `GetAvailableHotels`.
+> Verify C# tool behaviour by its answer, the way § 5 does.
+
+> [!NOTE]
+> **C# *does* instrument tool calls — the golden path just gives them nowhere to go.** Startup
+> logs `AgentServer connectivity: ProjectEndpoint=… OtlpEndpoint=(not set)
+> AppInsightsConfigured=False`, and the `Microsoft.OpenTelemetry` package that ships
+> transitively under `Microsoft.Agents.AI.Foundry.Hosting` documents `ExecuteToolScope` as
+> always-instrumented. It also enables Azure Monitor only when a connection string is present,
+> and `azd provision` sets no `APPLICATIONINSIGHTS_CONNECTION_STRING` — hence the
+> `Agent365-only mode active` line at startup. **Whether wiring up Application Insights would
+> surface those tool spans was not tested on this walk.** Do not assume it from this note.
+
+> [!WARNING]
+> **The hosted C# agent throws once per request, after answering correctly.** Every
+> `HTTP 200` on this walk was followed a second or two later by
+> `fail: …Agent365Exporter[0] Agent365Exporter: Unhandled export exception.
+> System.ArgumentException: An item with the same key has already been added.
+> Key: gen_ai.conversation.id` — 3 requests, 3 exceptions, always *after* the response. The
+> stack throws inside `ExportFormatter.MapAttributes` while **building** the span, before
+> anything is sent, so it is not a permissions or licensing problem and it does not depend on
+> your tenant. It never appears locally. Nothing you did causes it and nothing you write fixes
+> it; see the troubleshooting table.
+
+
 
 ```bash
 azd ai agent monitor -f
@@ -802,13 +973,14 @@ If you see something else, jump to *If that didn't work* below.
 | `RESPONSE 404: SubscriptionNotFound` right after picking a subscription during `init` | The subscription the picker offered is not usable — check you did not pick a near-identically named sibling. Mechanism not established. | `azd env set AZURE_SUBSCRIPTION_ID <id>`, `azd env set AZURE_TENANT_ID <id>` and `azd env set AZURE_LOCATION <region>`. Setting only `AZURE_LOCATION`, as azd suggests, is not enough. |
 | `RESPONSE 404: NotFound / "Project not found"` from `azd deploy`, on a project that exists | Intermittent; seen once on an immediate redeploy. Cause not established. | Re-run `azd deploy` unchanged. It succeeded in 14 s. Confirm first with `az resource list -g <rg>` — if the project is listed, nothing is broken. See [§ 6](#6-deploy-it). |
 | `azd down` ends in `409 RequestConflict / provisioning state is not terminal` | `azd` reached the purge before Azure finished deleting. The group is gone; the account is soft-deleted. | Wait a few minutes, then `az cognitiveservices account purge -n cog-<random> -g rg-<name> -l <region>`. Verify with `az cognitiveservices account list-deleted` — `az group exists` returns `false` even while this is unresolved. See [§ 7](#7-clean-up). |
-| Your new tool from § 5 is ignored, and the log never names it | `azd ai agent run` starts the server in the foreground and has no reload flag, so it is still running the code you had when you started it. | Ctrl+C and re-run `azd ai agent run --no-client`. Confirm with `gen_ai.tool.definitions` — it should now list both tools. See [§ 5](#5-add-your-own-tool). |
+| Your new tool from § 5 is ignored, and the log never names it | `azd ai agent run` starts the server in the foreground and has no reload flag, so it is still running the code you had when you started it. | Ctrl+C and re-run `azd ai agent run --no-client`. Confirm with `gen_ai.tool.definitions` — it should now list both tools. **C# has no such attribute**, and `OutputCount` will not catch this: the stale run scored `OutputCount=3` too. Ask something only the new tool can answer. See [§ 5](#5-add-your-own-tool). |
 | The agent never uses your tool | The name/description does not tell the model when to call it. | Make the docstring or C# description specific and action-oriented. Check what the model actually received in `gen_ai.tool.definitions` — see [§ 4](#4-run-locally). |
 | `ValueError: Model is required. Set via 'model' parameter or 'FOUNDRY_MODEL' environment variable.` | Nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME` — § 1's fifth question did not run, and `azd provision` never sets it. `azure.yaml` maps the variable through as `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, so the container receives an **empty string** rather than nothing, which is why this is a `ValueError` from the client and not a `KeyError`. `doctor` does not catch it. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then `azd ai agent run` again. |
 | **C#** — `System.ArgumentException: Argument is whitespace (Parameter 'model')`, thrown from `AsAIAgent` at `Program.cs` line 17 | The same empty string as the row above, reaching C# instead of Python. The sample's `?? "gpt-4o"` cannot save you: `??` tests for `null`, and an empty string is not null. Verified 2026-08-14. | Identical fix: `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then re-run. See [§ 2](#2-inspect-the-tool-definition). |
 | **C#** — `ManagedIdentityCredential authentication failed: All Managed Identity sources are unavailable … IMDSv2 probe failed` on every local `invoke` | Only on a machine with no Azure Instance Metadata Service — a laptop, or WSL. .NET's `DefaultAzureCredential` treats the IMDS **timeout** as a fatal error rather than "credential unavailable", so it stops instead of falling through to your `az login`. Python's does not, which is why only this track breaks. Costs 100 s before it fails. Deployed agents are unaffected: they have a real managed identity. | Restrict the chain to developer credentials for the local run only: `AZURE_TOKEN_CREDENTIALS=dev azd ai agent run --no-client`. Verified 2026-08-14 — the same invoke then answered in 9.020 s. |
 | A harmless question like `2+2` calls the tool | The tool description is too broad — or the previous question is still in the session. | Narrow when the tool should be used, and retest with `--new-session --new-conversation`. |
-| You cannot tell whether the tool ran | `invoke` never shows tool calls. | Read the `azd ai agent run` terminal locally, or `azd ai agent monitor` after deploying. |
+| You cannot tell whether the tool ran | `invoke` never shows tool calls. | Read the `azd ai agent run` terminal locally, or `azd ai agent monitor` after deploying. **C#**: locally use the `OutputCount` on the `Response … completed` line — larger than 1 means a tool round-trip, though it will not say which. Hosted C# logs neither, so judge by the answer. See [§ 4](#4-run-locally). |
+| **C#**, hosted only — `fail: …Agent365Exporter[0] Agent365Exporter: Unhandled export exception. System.ArgumentException: An item with the same key has already been added. Key: gen_ai.conversation.id` | A defect in the transitive `Microsoft.OpenTelemetry` 1.0.0-beta.1 package, which reaches you through `Microsoft.Agents.AI.Foundry.Hosting`. It throws in `ExportFormatter.MapAttributes` while building the span — before anything is sent — so it is neither a tenant nor a permissions problem. Reproduced on 3 of 3 requests, 2026-08-14. | **Nothing, and nothing is broken.** It fires *after* the response is returned; every request still answered `HTTP 200` with the right result. Telemetry export is lost, which on the golden path was going nowhere anyway — see [§ 6](#6-deploy-it). |
 | Tool works locally but not after deploy | You changed source but did not redeploy, or cloud identity differs. | Run `azd deploy`; check `azd ai agent show --output json`. |
 
 Everything else: [troubleshooting](../reference/troubleshooting.md).

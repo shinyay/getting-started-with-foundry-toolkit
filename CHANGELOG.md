@@ -107,12 +107,62 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Verified
 
+- **Lab 04's C# track walked a second time, 2026-08-14 — §§ 1–7, closing the repo's last
+  never-run instruction.** The first C# walk had skipped § 5, so the page still carried one
+  fragment nobody had compiled. Applied verbatim, it built **0 Warning(s), 0 Error(s)**, and
+  the page's last *illustrative* label is gone. Eight further findings, all now in
+  [Lab 04](docs/tutorial/04-add-tools.md):
+  - **The no-reload IMPORTANT now has proof, and it is worse than a stale answer.** The same
+    question, on the same server, before and after a restart: **$867** (= $289 × 3, the old
+    tool's listing price) and **$630** (= $210 × 3, the new `GetRoomRate`). No error, no
+    warning, no indication which tool ran — just confident arithmetic on the wrong data.
+  - **C# has one local tool signal, `OutputCount`, and both of its limits matter.** A tool
+    round-trip logs `OutputCount=3` against `1` for a plain reply. But it **counts without
+    naming**: the stale run above also scored 3, so trusting it would have graded that failure
+    a pass. And it **does not exist remotely** — hosted responses stream and end with
+    `SSE stream completed`, carrying no count.
+  - **The hosted C# agent logs nothing about tools, and the reason is not the one first
+    written down.** `monitor` streams container stdout/stderr; Python's tool lines arrive
+    because the `agent_framework` *logger* emits them. C# has no equivalent logger call — that
+    is all. It *does* instrument tool execution (`ExecuteToolScope`), but as spans, which would
+    never reach `monitor` regardless. An earlier draft of this entry blamed the exporter defect
+    below; that was wrong and the two are unrelated.
+  - **`Agent365-only mode active` is a consequence of the golden path, not a misconfiguration.**
+    The transitive `Microsoft.OpenTelemetry` package auto-enables Agent365 export and enables
+    Azure Monitor only when a connection string exists; `azd provision` sets no
+    `APPLICATIONINSIGHTS_CONNECTION_STRING`, which is also why startup logs
+    `AppInsightsConfigured=False`. **Whether wiring App Insights would surface the tool spans
+    was not tested** and the page says so rather than guessing.
+  - **A reproducible upstream defect in the hosted C# agent.** Every request answered
+    `HTTP 200` and was then followed by `Agent365Exporter: Unhandled export exception.
+    System.ArgumentException: An item with the same key has already been added.
+    Key: gen_ai.conversation.id` — 3 of 3 requests. It throws in `ExportFormatter.MapAttributes`
+    while *building* the span, before anything is sent, so it is independent of tenant and
+    permissions. Now a troubleshooting row that tells the reader to do nothing.
+  - **`--new-conversation` alone drops replayed history.** The same question cost 6989 ms with
+    the previous exchange in the conversation and 2903 ms without it, while the session ID was
+    unchanged. The page's tip to pass `--new-session --new-conversation` overstated what is
+    required, and the 9101 ms tool-call figure should be read against 2903 ms, not 6989 ms.
+  - **The `curl` 404 is a property of the protocol, not of Python.** The C# server logs the
+    same `404` for `/invocations/docs/openapi.json` at startup and then prints the same
+    suggestion; a manual `curl` confirmed it. Recorded where the explanation already lives, in
+    [Lab 02](docs/tutorial/02-first-agent.md), rather than duplicated.
+  - **`monitor` output is not safe to quote as-is.** It wraps lines **mid-token** at the
+    caller's terminal width — one capture split `traceparent:` into `traceparen` / `t: ,` — and
+    prints its own `status` lines out of chronological order. Added to the capture rules in
+    [`docs/reference/README.md`](docs/reference/README.md).
+
+  Timings: provision **1m24s**, deploy **2m13s**, local invoke **9.115s**, remote **6.152s**,
+  teardown **4m1s** — which is a new maximum and widens the recorded `azd down` spread to
+  **1m45s–4m1s**. Torn down and confirmed with both checks.
+
 - **Lab 04's C# track walked live for the first time, 2026-08-14.** The page has presented two
   tracks side by side since it was written, but every verified block on it came from Python;
   § 2's mapping table described C# from *reading* the sample, not from running it. A full
   lifecycle — init, provision, run, invoke, deploy, show, remote invoke, teardown — closes
-  that for §§ 1–4, 6 and 7. § 5's C# fragment is still unrun and is now labelled illustrative
-  rather than sitting silently beside verified Python output. The lifecycle itself proved
+  that for §§ 1–4, 6 and 7. § 5's C# fragment was still unrun at that point and was labelled
+  illustrative rather than sitting silently beside verified Python output; the second walk
+  above closed it. The lifecycle itself proved
   language-neutral (provision **1m39s**, deploy **2m24s**,
   local invoke **9.020s**, remote **9.587s**, down **2m36s**, all inside the Python spread) and
   the `doctor` output was **byte-identical to the Python block, all 30 lines**. Four
