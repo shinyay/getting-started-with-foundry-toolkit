@@ -24,6 +24,31 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Added
 
+- **`SECURITY.md`, `CODE_OF_CONDUCT.md` and `SUPPORT.md`, plus the settings that make them
+  true.** All three were missing — six paths returned 404 — and GitHub surfaces each of them in
+  its own UI, so the gap was visible to every reader. They sit at the **repo root**, not in
+  `.github/`, because `glob` wildcards do not match dot-directories and CI checks 1, 7 and 9
+  therefore cannot see files there.
+  - **`SECURITY.md` has a real job in this repo.** The docs deliberately publish a
+    subscription ID and a tenant ID in full inside ✅ Verified blocks — redacting them would be
+    editing captured output, which rule 1 forbids. Without a stated policy a reader has no way
+    to tell a considered decision from a leak, and the only channel open to them was a public
+    issue, which is the worst possible place to report a suspected credential. The file now
+    names each identifier, where it appears and why publishing it is safe, and points at
+    **private vulnerability reporting**, which was enabled in the same pass. **Secret scanning
+    and push protection were also turned on** — the most valuable control available to a repo
+    whose method is pasting raw CLI output. Dependabot alerts and non-provider secret patterns
+    could **not** be enabled through the API (`HTTP 422`) and remain off.
+  - **`SUPPORT.md` is a router, not a fourth invitation.** The new-issue chooser already
+    carried three contact links; GitHub renders `SUPPORT.md` above them, so it is written as
+    the index that disambiguates all of them rather than as another "ask here".
+  - **`CODE_OF_CONDUCT.md` adopts Contributor Covenant 2.1 by reference**, not by copy — a
+    local copy would only drift from the upstream text, which is the same reasoning as rule 7.
+- **Three stale "nine checks" claims corrected.** `README.md` (twice) and
+  `.github/PULL_REQUEST_TEMPLATE.md` still promised nine local checks after the tenth was
+  added; `CONTRIBUTING.md` already said ten. A wrong count in the PR template asks every
+  contributor to verify the wrong thing. Check 7 does not cover it — it enforces version
+  strings, not counts.
 - **A tenth CI check: markdown tables must be rectangular.** Every row must have the header's
   cell count, counting only unescaped `|` — which is what GFM itself counts, so a pipe inside
   a code span in a table cell is a real rendering bug unless written `\|`. Written after an

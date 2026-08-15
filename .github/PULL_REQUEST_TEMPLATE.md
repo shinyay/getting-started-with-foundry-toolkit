@@ -21,7 +21,7 @@
 
 ## Checklist
 
-- [ ] The [nine checks](https://github.com/shinyay/getting-started-with-foundry-toolkit/blob/main/AGENTS.md#validation-before-committing) pass locally (none need Azure, network or credentials)
+- [ ] The [ten checks](https://github.com/shinyay/getting-started-with-foundry-toolkit/blob/main/AGENTS.md#validation-before-committing) pass locally (none need Azure, network or credentials)
 - [ ] No CLI output was written from memory
 - [ ] Content is in the right layer — `learn/` explains, `tutorial/` is hands-on, `reference/` is lookup
 - [ ] Version numbers, timings and explanations are stated once, in `docs/reference/`, and linked from elsewhere

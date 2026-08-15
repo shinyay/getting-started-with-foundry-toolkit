@@ -297,15 +297,20 @@ breakdown, including the standing daily cost container mode adds: [💰 Cost](do
 
 Found a bug, or has the preview moved on?
 
-- 📕 **[A documented command no longer works](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new?template=stale-command.yml)** — the most valuable report you can file. CI cannot catch this: none of the nine checks call Azure or run `azd`.
+- 📕 **[A documented command no longer works](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new?template=stale-command.yml)** — the most valuable report you can file. CI cannot catch this: none of the ten checks call Azure or run `azd`.
 - 📗 [Anything else about the guide](https://github.com/shinyay/getting-started-with-foundry-toolkit/issues/new/choose)
 
 Because this guide's value is that its output is **real**, please re-run the command and paste
 the actual output when correcting a verified block.
 
-Start at [`CONTRIBUTING.md`](CONTRIBUTING.md). The rules themselves and the nine local
+Start at [`CONTRIBUTING.md`](CONTRIBUTING.md). The rules themselves and the ten local
 validation checks are in [`AGENTS.md`](AGENTS.md); release history and the CalVer policy are
 in [`CHANGELOG.md`](CHANGELOG.md).
+
+Also here: [`SUPPORT.md`](SUPPORT.md) routes a question to the right place,
+[`SECURITY.md`](SECURITY.md) covers private reporting — and explains which real Azure
+identifiers are published on purpose, and why — and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+adopts the Contributor Covenant 2.1.
 
 ---
 
