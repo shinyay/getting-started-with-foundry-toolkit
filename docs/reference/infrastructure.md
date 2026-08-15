@@ -48,6 +48,13 @@ so future provisions read local files instead.
 
 ## Exact `--infra` help text
 
+> [!WARNING]
+> **This help text changed in the newer extension build.** `--infra` no longer ejects into
+> `./infra/` wholesale — existing infrastructure is preserved and Foundry files are generated
+> as a separate `infra/foundry` layer. The block below is still the exact text for the row
+> everything on this page was verified on. See
+> [newer than the verified toolchain](README.md#newer-than-the-verified-toolchain).
+
 <details open>
 <summary>✅ Verified `azd ai agent init --help` excerpt</summary>
 

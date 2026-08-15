@@ -84,7 +84,7 @@ azd version
 ```
 
 ```text
-azd version 1.30.0 (commit eea6db684821093daabd8bf357b6c9b636168abf) (stable)
+azd version 1.31.1 (commit 38c0e3235ee7a27a942a95431b0d0a8a530ae6b0) (stable)
 ```
 
 The trailing `(stable)` is the release channel. If yours says anything else you are on a
@@ -104,62 +104,75 @@ Then immediately bring everything to latest:
 azd extension upgrade --all
 ```
 
+> [!IMPORTANT]
+> **`azd` 1.31.0 renamed this command to `azd extension update`, and the old name is now
+> invisible.** `upgrade` still works — `azd extension upgrade --help` and
+> `azd extension update --help` are byte-identical captures in
+> [`evidence/help/`](../../evidence/) — but `azd extension --help` lists only `update`, so a
+> reader exploring the CLI is told `upgrade` does not exist. This page keeps `upgrade` because
+> it is the one spelling that also works on the `1.27.1` floor. Everything the command *prints*
+> now says "update", including when you invoke it by the old name.
+
 <details>
-<summary>✅ Verified output — captured 2026-08-14, everything already current (each <code>Upgrading …</code> line is shown once; see the note)</summary>
+<summary>✅ Verified output — captured 2026-08-15 on <code>azd</code> 1.31.1 into a scratch <code>AZD_CONFIG_DIR</code>, so this is what the previous step alone leaves you with (each <code>Updating …</code> line is shown once; see the note)</summary>
 
 ```text
-Upgrade azd extensions (azd extension upgrade)
-Upgrades the specified extensions on the local machine.
+Update azd extensions (azd extension update)
+Updates the specified extensions on the local machine.
 
-Upgrading azure.ai.agents extension
-  (-) Skipped: Upgrading azure.ai.agents extension (No upgrade available)
+Updating azure.ai.agents extension
+  (-) Skipped: Updating azure.ai.agents extension (No update available)
 
-Upgrading azure.ai.connections extension
-  (-) Skipped: Upgrading azure.ai.connections extension (No upgrade available)
+Updating azure.ai.inspector extension
+  (-) Skipped: Updating azure.ai.inspector extension (No update available)
 
-Upgrading azure.ai.inspector extension
-  (-) Skipped: Upgrading azure.ai.inspector extension (No upgrade available)
+Updating azure.ai.projects extension
+  (-) Skipped: Updating azure.ai.projects extension (No update available)
 
-Upgrading azure.ai.projects extension
-  (-) Skipped: Upgrading azure.ai.projects extension (No upgrade available)
+  3 skipped
 
-Upgrading azure.ai.toolboxes extension
-  (-) Skipped: Upgrading azure.ai.toolboxes extension (No upgrade available)
-
-  5 skipped
-
-SUCCESS: Extensions upgraded successfully
+SUCCESS: Extensions updated successfully
 ```
 </details>
 
 > [!NOTE]
-> **Each `Upgrading <extension>` line is printed once or twice, and which ones double varies
-> between runs.** Three consecutive runs on an unchanged machine emitted 8, 10 and 8 of those
-> lines. They are ordinary output, not a redrawn progress line — the capture contains no
-> cursor-movement escape, so every one of them stays in your scrollback. The block above shows
-> each once. What matters is the `(-) Skipped:` line per extension, the `5 skipped` total and
-> `SUCCESS`.
+> **Each `Updating <extension>` line is printed once or twice, and which ones double varies
+> between runs.** Two runs on a machine carrying eight extensions emitted 15 and 14 of those
+> lines. They are ordinary output, not a redrawn progress line — the capture contains colour
+> codes but no cursor-movement escape, so every one of them stays in your scrollback. The
+> block above shows each once. What matters is the `(-) Skipped:` line per extension, the
+> total and `SUCCESS`.
 
 > [!NOTE]
-> That is what a **terminal** shows. `azd` prints a live `Upgrading <extension>` line and
+> That is what a **terminal** shows. `azd` prints a live `Updating <extension>` line and
 > overwrites it in place with the result, so you never see it settle. Redirect the same command
 > to a file and those progress lines survive — twice each — because a file has no cursor to
 > rewind. Neither form is wrong; do not be surprised when CI logs look busier than your screen.
 
 > [!IMPORTANT]
-> ✅ **Verified: there are five extensions, not four.** `azure.ai.connections` is easy to miss
-> because nothing in the getting-started flow mentions it. Confirm yours with
-> `azd extension list --installed`:
+> ✅ **Verified 2026-08-15: installing `azure.ai.agents` alone now brings three extensions, not
+> five.** Captured into a scratch `AZD_CONFIG_DIR` so that nothing already on the machine could
+> contribute:
 >
 > ```text
-> ID                     NAME                             STATUS       INSTALLED      LATEST         SOURCE
-> ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-> azure.ai.agents        Foundry agents (Beta)            Up to date   1.0.0-beta.9   1.0.0-beta.9   azd
-> azure.ai.connections   Foundry Connections (Beta)       Up to date   1.0.0-beta.4   1.0.0-beta.4   azd
-> azure.ai.inspector     Foundry Agent Inspector (Beta)   Up to date   1.0.0-beta.3   1.0.0-beta.3   azd
-> azure.ai.projects      Foundry Projects (Beta)          Up to date   1.0.0-beta.5   1.0.0-beta.5   azd
-> azure.ai.toolboxes     Foundry Toolboxes (Beta)         Up to date   1.0.0-beta.5   1.0.0-beta.5   azd
+> Install an azd extension (azd extension install)
+> Installs the specified extension onto the local machine.
+>
+> Installing azure.ai.agents extension
+>   (✓) Done: Installing azure.ai.agents extension (1.0.0-beta.10)
+>   (✓) Done: Installing azure.ai.inspector dependency (1.0.0-beta.3)
+>   (✓) Done: Installing azure.ai.projects dependency (1.0.0-beta.6)
+>       Usage: azd ai agent <command> [options]
+>       Examples:
+>         azd ai agent init
+>
+> SUCCESS: Extension(s) installed successfully
 > ```
+>
+> **`azure.ai.connections` is no longer pulled in as a dependency.** It was one when this guide
+> was verified, and no upstream changelog mentions the change. Whether it returns on demand the
+> way `azure.ai.toolboxes` does is **not verified** — see
+> [reference → newer than the verified toolchain](../reference/README.md#newer-than-the-verified-toolchain).
 
 Confirm what you actually have:
 
@@ -167,13 +180,14 @@ Confirm what you actually have:
 azd extension list --installed
 ```
 
-✅ Verified 2026-08-09 — **five** extensions, versions as pinned in
-[reference → Fast facts](../reference/README.md#fast-facts):
+The guide's labs were verified with **five** extensions, versions as pinned in
+[reference → Fast facts](../reference/README.md#fast-facts). Your own list may be shorter on a
+clean machine, or longer if `azd` has installed others for unrelated work:
 
 | Extension | Role | How it got there |
 |---|---|---|
 | `azure.ai.agents` | the `azd ai agent` command tree | you installed it |
-| `azure.ai.connections` | Foundry connections (used by A2A / MCP wiring) | dependency |
+| `azure.ai.connections` | Foundry connections (used by A2A / MCP wiring) | dependency when verified; ⚠️ **not** a dependency today |
 | `azure.ai.inspector` | local Agent Inspector UI | dependency |
 | `azure.ai.projects` | Foundry project / model management | dependency |
 | `azure.ai.toolboxes` | `azd ai toolbox …` | ⚠️ installs **on first use**, see below |

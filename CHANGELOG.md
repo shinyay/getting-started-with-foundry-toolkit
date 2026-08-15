@@ -24,6 +24,42 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
 
 ### Added
 
+- **The toolchain moved, and this repo measured exactly how far rather than guessing.**
+  `azd` 1.30.0 → 1.31.1, the agents extension one beta forward, and its projects dependency
+  with it. Upstream publishes an `azd` changelog but **nothing** for the extension betas — the
+  page this repo points readers at, `WHATS_NEW.md`, tracks the VS Code extension and not these.
+  So the 49 `--help` captures in `evidence/help/` were re-taken and diffed at each step, which
+  makes that diff the only changelog the extension has.
+  - **Upgrading `azd` alone changed nothing: 0 of 49 captures moved.** The entire `azd ai agent`
+    surface lives in the extension. That is worth stating because it is the opposite of the
+    intuition that a CLI upgrade is the risky one.
+  - **The extension moved 3 of 49, by 21 lines**: two new subcommands (`pack`, `publish`) that
+    build and publish a Teams app package; `--infra` no longer ejecting into `./infra/`
+    wholesale but generating a separate `infra/foundry` layer; and `monitor` gaining the
+    ability to run outside an azd project. All three are recorded in **one** place,
+    [reference → newer than the verified toolchain](docs/reference/README.md#newer-than-the-verified-toolchain),
+    which is the only file CI check 7 exempts and therefore the only file that *can* hold a
+    version other than the canonical one.
+  - **The canonical version table was deliberately left alone.** It records the toolchain the
+    labs were *verified* on, and no lab has been re-walked. Bumping it would have propagated a
+    false "verified" claim into 13 files — check 7 enforces exactly that propagation — so the
+    honest move was to leave it and record the drift beside it.
+- **A clean-room install revealed a dependency change no changelog mentions.** Installing
+  `azure.ai.agents` into a scratch `AZD_CONFIG_DIR` now brings **three** extensions, not five:
+  `azure.ai.connections` is no longer pulled in. Whether it returns on demand the way
+  `azure.ai.toolboxes` does is explicitly **not verified**, and it is flagged as the most
+  likely way a lab breaks on the newer row. The scratch config directory mattered: the
+  authoring machine carries eight extensions, three of which came from unrelated work, so
+  reading its `azd extension list` would have produced a number no reader would ever see.
+- **`evidence/help/` grew to 52 captures.** `azd 1.31.0` renamed `azd extension upgrade` to
+  `azd extension update`, keeping the old name as an alias — and ten places in this repo tell
+  a reader to run the old name while nothing in `evidence/` backed any of it, because the
+  original 49 cover only `azd ai agent` and `azd ai toolbox`. The three new captures show the
+  worst shape a deprecation can take here: `ext-update.txt` and `ext-upgrade.txt` are
+  byte-identical, so the old name still works, but `ext.txt` proves it appears in **no** help
+  output. Nothing fails; the CLI simply tells every reader who explores it that the command
+  this repo documents does not exist.
+
 - **`SECURITY.md`, `CODE_OF_CONDUCT.md` and `SUPPORT.md`, plus the settings that make them
   true.** All three were missing — six paths returned 404 — and GitHub surfaces each of them in
   its own UI, so the gap was visible to every reader. They sit at the **repo root**, not in
@@ -122,6 +158,25 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   documented way to do it; this rewrite used plain `--replace-text`.
 
 ### Changed
+
+- **[Lab 01](docs/tutorial/01-setup.md) was re-captured on the current toolchain** while every
+  other page was left on the verified one. That is not an inconsistency: Lab 01's job is to
+  describe what you install *today*, whereas Labs 02–10 report runs that happened on a stated
+  day. Every line of its extension section had changed — the command's banner, the verb in
+  each progress line, the skip reason, the total and the success message. The page still tells
+  readers to type `upgrade`, because that is the one spelling that also works on the `1.27.1`
+  floor the guide claims to support.
+- **[Lab 04](docs/tutorial/04-add-tools.md)'s interactive `init` block now says which two of
+  its lines are stale.** `azd` 1.31.0 removed duplicated punctuation from interactive prompts,
+  which changes `…uses.:` and `…proceed?:`. The new rendering is **not** written out, because
+  that block can only be captured by answering prompts at a standalone terminal — `azd` will
+  not prompt in VS Code's integrated terminal or for an automated agent. Guessing the two
+  lines would have been indistinguishable from having run it, which is the one thing rule 1
+  forbids.
+- **Two reference pages now point at the drift instead of silently disagreeing with reality.**
+  `azd-cli.md` does not list the two new subcommands, and `infrastructure.md` quotes `--infra`
+  help text that has since changed; both now carry a pointer rather than a rewrite, since
+  rewriting them would require moving the canonical table.
 
 - **The repository is public.** A getting-started guide nobody can open has no readers: the
   `v2026.08.0` release notes and the README badges were owner-only. Publishing also turns on

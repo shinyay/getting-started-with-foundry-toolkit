@@ -2,6 +2,11 @@
 
 Captured from `azd 1.30.0` / `azure.ai.agents 1.0.0-beta.9`.
 
+> [!NOTE]
+> The extension has moved one beta forward since this page was captured, and the newer build
+> adds two subcommands this page does not list. See
+> [newer than the verified toolchain](README.md#newer-than-the-verified-toolchain).
+
 ```bash
 azd ai agent --help
 ```

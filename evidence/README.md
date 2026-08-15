@@ -12,17 +12,19 @@ what this folder fixes.
 
 ## What is here
 
-`help/` — **49 files, 212 KB** of verbatim `--help` output. This is the authority behind
+`help/` — **52 files, 224 KB** of verbatim `--help` output. This is the authority behind
 every flag name, default, subcommand list and shorthand asserted anywhere in `docs/`.
 
 | Group | Files | Covers |
 |---|---:|---|
 | `azd ai agent` tree | 43 | `_root.txt` plus every subcommand and sub-subcommand |
 | `azd ai toolbox` tree | 2 | `toolbox.txt`, `toolbox-create.txt` |
+| `azd extension` tree | 3 | `ext.txt`, `ext-update.txt`, `ext-upgrade.txt` — see below |
 | Negative evidence | 4 | commands that **do not exist** — see below |
 
 Files prefixed `n-` are second-level captures (`n-files-upload.txt` is
-`azd ai agent files upload --help`).
+`azd ai agent files upload --help`). Files prefixed `ext-` are the `azd extension` tree,
+which lives in **core `azd`** rather than in an extension.
 
 ---
 
@@ -38,6 +40,31 @@ ERROR: unknown command "deploy" for "agent"
 `env`, `logs` and `provision` do not exist**. This matters because `azd deploy` and
 `azd provision` *do* exist at the root, so the natural assumption is wrong. A reader who
 guesses gets a hard failure; these four captures are why the docs never suggest it.
+
+---
+
+## Why the `azd extension` tree is captured at all
+
+Every other file here comes from an extension. These three come from **core `azd`**, and
+they were added because a rename proved the gap was dangerous.
+
+`azd 1.31.0` renamed `azd extension upgrade` to **`azd extension update`** and kept the old
+name as an alias. Ten places in this repository tell a reader to run the old name, and
+[`docs/tutorial/01-setup.md`](../docs/tutorial/01-setup.md) quotes its output verbatim — yet
+nothing in `help/` backed any of it, because the 49 original captures cover only
+`azd ai agent` and `azd ai toolbox`.
+
+The three captures pin down what a reader actually gets:
+
+| File | Command | What it proves |
+|---|---|---|
+| `ext.txt` | `azd extension --help` | the subcommand list names `update` and **does not list `upgrade` at all** |
+| `ext-update.txt` | `azd extension update --help` | the flag is `--no-dependency-updates` |
+| `ext-upgrade.txt` | `azd extension upgrade --help` | byte-identical to `ext-update.txt` |
+
+So `upgrade` still works but is **undiscoverable** — it appears in no help output. That is
+the worst shape a deprecation can take for a documentation repository: the old command keeps
+passing, so nothing fails, while every reader who explores the CLI is told it does not exist.
 
 ---
 
@@ -76,12 +103,18 @@ not a reliable success signal.** Never gate CI on them.
 
 ## Provenance
 
-| | |
+The 49 extension captures and the 3 core-`azd` captures were taken at different times,
+because the second group was added in response to a rename. Both rows are exact.
+
+| Group | Captured | `azd` | Extensions |
+|---|---|---|---|
+| the 49 `azd ai …` captures | **2026-08-08** | **1.30.0** | `azure.ai.agents` 1.0.0-beta.9 · `azure.ai.connections` 1.0.0-beta.4 · `azure.ai.inspector` 1.0.0-beta.3 · `azure.ai.projects` 1.0.0-beta.5 · `azure.ai.toolboxes` 1.0.0-beta.5 |
+| the 3 `ext-*` captures | **2026-08-15** | **1.31.1** | not applicable — `azd extension` is core `azd` |
+
+| Re-checked | |
 |---|---|
-| Captured | **2026-08-08** |
-| `azd` | **1.30.0** |
-| Extensions | `azure.ai.agents` 1.0.0-beta.9 · `azure.ai.connections` 1.0.0-beta.4 · `azure.ai.inspector` 1.0.0-beta.3 · `azure.ai.projects` 1.0.0-beta.5 · `azure.ai.toolboxes` 1.0.0-beta.5 |
-| Re-checked | **2026-08-12** — `azd extension list --installed` reported all five *Up to date*, so these captures still describe current behaviour |
+| **2026-08-12** | `azd extension list --installed` reported all five *Up to date*, so the captures still described current behaviour |
+| **2026-08-15** | the extensions have since moved forward, and the 49 captures were **re-taken and diffed** rather than assumed. Three files differ; the exact diff is recorded in the [canonical table](../docs/reference/README.md#newer-than-the-verified-toolchain). The committed captures deliberately still describe the toolchain the labs were verified on |
 
 The canonical version table lives in [`docs/reference/README.md`](../docs/reference/README.md)
 and CI check 7 enforces that the rest of the repo agrees with it. If the two ever disagree,

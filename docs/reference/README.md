@@ -68,6 +68,76 @@ Fifteen pages, grouped by what you are trying to do.
 
 ---
 
+## Newer than the verified toolchain
+
+> 🏷️ **This section is the one home for toolchain drift.** Every other page states the
+> toolchain it was *verified on* and must not be edited to claim a newer one. CI check 7
+> enforces that, and exempts only this file.
+
+Measured **2026-08-15**. The labs have **not** been re-walked, so every ✅ Verified block
+elsewhere in this repository still describes the row it was captured on.
+
+| | Verified on | Installed when measured |
+|---|---|---|
+| `azd` | 1.30.0 | **1.31.1** |
+| agents extension | `1.0.0-beta.9` | **`1.0.0-beta.10`** |
+| projects extension | `1.0.0-beta.5` | **`1.0.0-beta.6`** |
+| what a clean install brings | 5 extensions | **3** — see below |
+
+### The dependency set shrank
+
+Installing `azure.ai.agents` into a scratch `AZD_CONFIG_DIR` on 2026-08-15 brought
+`azure.ai.inspector` and `azure.ai.projects` and nothing else.
+
+| Extension | Verified row | Today |
+|---|---|---|
+| `azure.ai.inspector` | dependency | dependency |
+| `azure.ai.projects` | dependency | dependency |
+| `azure.ai.connections` | dependency | **not installed** |
+| `azure.ai.toolboxes` | on first use | not re-tested |
+
+No upstream changelog mentions this. Whether `azure.ai.connections` returns on demand — the
+way `azure.ai.toolboxes` does — is **not verified**, and it is the single most likely way a
+lab breaks on the newer row.
+
+A machine that has been used for other work may carry more than either number.
+`azure.ai.routines`, `azure.ai.skills` and `microsoft.foundry` were all present on the
+authoring machine and none of them came from installing `azure.ai.agents`.
+
+### What actually changed
+
+The 49 `azd ai …` captures in [`evidence/help/`](../../evidence/) were re-taken on each
+step and diffed, rather than assumed:
+
+| Step | Files changed of 49 | Meaning |
+|---|---:|---|
+| `azd` 1.30.0 → 1.31.1, extensions unchanged | **0** | the agent command surface lives entirely in the extension; upgrading core `azd` moves none of it |
+| agents `beta.9` → `beta.10` | **3** | 21 lines, listed below |
+
+| Capture | Change |
+|---|---|
+| `_root.txt` | two new subcommands: `azd ai agent pack` and `azd ai agent publish`, which build and publish a Teams app package for an activity agent |
+| `init.txt` | `--infra` no longer ejects into `./infra/` wholesale — existing infrastructure is preserved and Foundry files are generated as a separate `infra/foundry` layer |
+| `monitor.txt` | `monitor` now works **outside** an azd project, resolving the endpoint from `azd ai project set` or `FOUNDRY_PROJECT_ENDPOINT` |
+
+`azure.ai.projects` moved as a **dependency** of the agents extension, not on its own — it
+reported *No update available* when reached by name in the same run.
+
+### What this means for a page you are reading
+
+| Page states | Status |
+|---|---|
+| a flag, default or subcommand | still backed by `evidence/help/`, which deliberately stays on the verified row |
+| an `--infra` outcome, or the `azd ai agent` subcommand list | **known stale** — see the table above |
+| a timing, resource name or agent reply | unaffected; those are run outputs, not CLI surface |
+
+One command was renamed in `azd` 1.31.0: `azd extension upgrade` became
+`azd extension update`, with the old name kept as a working but **undiscoverable** alias.
+[Lab 01](../tutorial/01-setup.md#3-install-the-agent-extension) was re-captured on 1.31.1
+because it is the page whose job is to describe what you install *today*.
+
+---
+
 ## Verified runs
 
 Every number here came from a real run against live Azure, then destroyed. Nothing is estimated.

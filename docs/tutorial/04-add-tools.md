@@ -99,6 +99,17 @@ Next:
 
 </details>
 
+> [!WARNING]
+> **Two lines in the block above are known to have changed and have not been re-captured.**
+> `azd` 1.31.0 fixed duplicated punctuation in interactive prompts, so a message that already
+> ends in punctuation no longer gains a second mark. That affects
+> `? Select a Foundry project … uses.:` and `? How would you like to proceed?:` — the trailing
+> `:` after `.` and `?` is what the upstream fix removes. The exact new rendering is **not
+> reproduced here**, because this block can only be captured by answering the prompts at a
+> standalone terminal: `azd` does not prompt inside VS Code's integrated terminal, and it
+> does not prompt for an automated agent either. Everything else in the block is unaffected.
+> See [reference → newer than the verified toolchain](../reference/README.md#newer-than-the-verified-toolchain).
+
 Answer **Create a new Foundry project** to follow this lab; **Use an existing Foundry project**
 reuses the one Lab 03 left behind, if you kept it. Answer **Deploy as specified in azure.yaml**
 to the fifth; the other two options are **Choose a different model** and **Skip this model
