@@ -12,14 +12,14 @@ what this folder fixes.
 
 ## What is here
 
-`help/` — **52 files, 224 KB** of verbatim `--help` output. This is the authority behind
+`help/` — **53 files, 228 KB** of verbatim `--help` output. This is the authority behind
 every flag name, default, subcommand list and shorthand asserted anywhere in `docs/`.
 
 | Group | Files | Covers |
 |---|---:|---|
 | `azd ai agent` tree | 43 | `_root.txt` plus every subcommand and sub-subcommand |
 | `azd ai toolbox` tree | 2 | `toolbox.txt`, `toolbox-create.txt` |
-| `azd extension` tree | 3 | `ext.txt`, `ext-update.txt`, `ext-upgrade.txt` — see below |
+| `azd extension` tree | 4 | `ext.txt`, `ext-install.txt`, `ext-update.txt`, `ext-upgrade.txt` — see below |
 | Negative evidence | 4 | commands that **do not exist** — see below |
 
 Files prefixed `n-` are second-level captures (`n-files-upload.txt` is
@@ -59,6 +59,7 @@ The three captures pin down what a reader actually gets:
 | File | Command | What it proves |
 |---|---|---|
 | `ext.txt` | `azd extension --help` | the subcommand list names `update` and **does not list `upgrade` at all** |
+| `ext-install.txt` | `azd extension install --help` | `--version` can pin a version and `--force` allows downgrades — the flags behind the claim that the verified toolchain is *partly* reproducible |
 | `ext-update.txt` | `azd extension update --help` | the flag is `--no-dependency-updates` |
 | `ext-upgrade.txt` | `azd extension upgrade --help` | byte-identical to `ext-update.txt` |
 
@@ -109,7 +110,7 @@ because the second group was added in response to a rename. Both rows are exact.
 | Group | Captured | `azd` | Extensions |
 |---|---|---|---|
 | the 49 `azd ai …` captures | **2026-08-08** | **1.30.0** | `azure.ai.agents` 1.0.0-beta.9 · `azure.ai.connections` 1.0.0-beta.4 · `azure.ai.inspector` 1.0.0-beta.3 · `azure.ai.projects` 1.0.0-beta.5 · `azure.ai.toolboxes` 1.0.0-beta.5 |
-| the 3 `ext-*` captures | **2026-08-15** | **1.31.1** | not applicable — `azd extension` is core `azd` |
+| the 4 `azd extension` captures | **2026-08-15** | **1.31.1** | not applicable — `azd extension` is core `azd` |
 
 | Re-checked | |
 |---|---|

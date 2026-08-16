@@ -169,9 +169,11 @@ SUCCESS: Extensions updated successfully
 > SUCCESS: Extension(s) installed successfully
 > ```
 >
-> **`azure.ai.connections` is no longer pulled in as a dependency.** It was one when this guide
-> was verified, and no upstream changelog mentions the change. Whether it returns on demand the
-> way `azure.ai.toolboxes` does is **not verified** — see
+> **`azure.ai.connections` is not installed by either version.** Asking for the verified
+> `1.0.0-beta.9` by name brings the same three, so this is not something the newer extension
+> changed. It was present on the machine the labs were verified on, but how it got there was
+> never captured. Whether it returns on demand the way `azure.ai.toolboxes` does is **not
+> verified** — see
 > [reference → newer than the verified toolchain](../reference/README.md#newer-than-the-verified-toolchain).
 
 Confirm what you actually have:
@@ -187,7 +189,7 @@ clean machine, or longer if `azd` has installed others for unrelated work:
 | Extension | Role | How it got there |
 |---|---|---|
 | `azure.ai.agents` | the `azd ai agent` command tree | you installed it |
-| `azure.ai.connections` | Foundry connections (used by A2A / MCP wiring) | dependency when verified; ⚠️ **not** a dependency today |
+| `azure.ai.connections` | Foundry connections (used by A2A / MCP wiring) | ⚠️ **not** installed today; present when verified, origin never captured |
 | `azure.ai.inspector` | local Agent Inspector UI | dependency |
 | `azure.ai.projects` | Foundry project / model management | dependency |
 | `azure.ai.toolboxes` | `azd ai toolbox …` | ⚠️ installs **on first use**, see below |

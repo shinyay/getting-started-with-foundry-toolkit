@@ -37,7 +37,7 @@ re-verify the block rather than argue about it.
 | If you are… | Then… |
 |---|---|
 | correcting a **verified** block | re-run the command and paste what you actually saw. Do not edit it to what it *should* say |
-| adding a command, flag or default | check it against [`evidence/help/`](evidence/) first — 52 verbatim `--help` captures are the authority |
+| adding a command, flag or default | check it against [`evidence/help/`](evidence/) first — 53 verbatim `--help` captures are the authority |
 | documenting something you could not run | say so in the page. A gap stated out loud is worth more than a plausible guess |
 | adding an explanation | put it in `docs/learn/`; put the commands in `docs/tutorial/` and link between them |
 

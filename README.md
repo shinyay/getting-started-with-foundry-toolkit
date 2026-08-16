@@ -128,7 +128,7 @@ docs/
 ├── tutorial/           🧪 do — 10 checkpointed labs, every output verified ⭐
 └── reference/          📖 look up — 15 pages · cheatsheet · FAQ · manifest schema
                         identity · cost · observability · deploy modes · glossary
-evidence/               🔬 prove — 52 verbatim --help captures the docs are checked against
+evidence/               🔬 prove — 53 verbatim --help captures the docs are checked against
 samples/
 ├── python/       01-hello-world → 02-tools → 03-mcp-toolbox → 04-eval
 └── csharp/       01 → 03 (step 04 is CLI-level and language-agnostic)

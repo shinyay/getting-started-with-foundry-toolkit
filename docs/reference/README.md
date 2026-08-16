@@ -84,21 +84,48 @@ elsewhere in this repository still describes the row it was captured on.
 | projects extension | `1.0.0-beta.5` | **`1.0.0-beta.6`** |
 | what a clean install brings | 5 extensions | **3** — see below |
 
-### The dependency set shrank
+### The dependency set shrank — and not because of `beta.10`
 
 Installing `azure.ai.agents` into a scratch `AZD_CONFIG_DIR` on 2026-08-15 brought
-`azure.ai.inspector` and `azure.ai.projects` and nothing else.
+`azure.ai.inspector` and `azure.ai.projects` and nothing else. Asking for the **verified**
+version by name brings the same three:
 
-| Extension | Verified row | Today |
-|---|---|---|
-| `azure.ai.inspector` | dependency | dependency |
-| `azure.ai.projects` | dependency | dependency |
-| `azure.ai.connections` | dependency | **not installed** |
-| `azure.ai.toolboxes` | on first use | not re-tested |
+```text
+Install an azd extension (azd extension install)
+Installs the specified extension onto the local machine.
 
-No upstream changelog mentions this. Whether `azure.ai.connections` returns on demand — the
-way `azure.ai.toolboxes` does — is **not verified**, and it is the single most likely way a
-lab breaks on the newer row.
+Installing azure.ai.agents extension
+  (✓) Done: Installing azure.ai.agents extension (1.0.0-beta.9)
+  (✓) Done: Installing azure.ai.inspector dependency (1.0.0-beta.3)
+  (✓) Done: Installing azure.ai.projects dependency (1.0.0-beta.6)
+      Usage: azd ai agent <command> [options]
+      Examples:
+        azd ai agent init
+
+SUCCESS: Extension(s) installed successfully
+```
+
+| Extension | Verified row | `beta.9` installed today | `beta.10` installed today |
+|---|---|---|---|
+| `azure.ai.inspector` | dependency, `1.0.0-beta.3` | `1.0.0-beta.3` | `1.0.0-beta.3` |
+| `azure.ai.projects` | dependency, `1.0.0-beta.5` | `1.0.0-beta.6` | `1.0.0-beta.6` |
+| `azure.ai.connections` | present, `1.0.0-beta.4` | **not installed** | **not installed** |
+| `azure.ai.toolboxes` | on first use | not re-tested | not re-tested |
+
+Since both versions behave identically, this is **not** something `beta.10` changed — the
+resolution happens on the registry side, and no upstream changelog mentions it. How
+`azure.ai.connections` reached the machine the labs were verified on was never captured, so
+whether it returns on demand — the way `azure.ai.toolboxes` does — is **not verified**. It
+remains the single most likely way a lab breaks on the newer row.
+
+### The pinned toolchain is only partly reproducible
+
+`azd extension install` accepts `--version`, and `1.0.0-beta.9` is still served, so the
+agents extension itself can be pinned back to the verified row. Its **dependencies cannot**:
+they resolve to latest at install time, which is why asking for `beta.9` today still yields
+`azure.ai.projects` `1.0.0-beta.6` rather than the `1.0.0-beta.5` this table records.
+Reproducing the verified row exactly would mean installing each dependency by name with
+`--version` and `--no-dependencies` — that has **not** been tested.
 
 A machine that has been used for other work may carry more than either number.
 `azure.ai.routines`, `azure.ai.skills` and `microsoft.foundry` were all present on the

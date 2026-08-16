@@ -46,12 +46,20 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
     honest move was to leave it and record the drift beside it.
 - **A clean-room install revealed a dependency change no changelog mentions.** Installing
   `azure.ai.agents` into a scratch `AZD_CONFIG_DIR` now brings **three** extensions, not five:
-  `azure.ai.connections` is no longer pulled in. Whether it returns on demand the way
-  `azure.ai.toolboxes` does is explicitly **not verified**, and it is flagged as the most
-  likely way a lab breaks on the newer row. The scratch config directory mattered: the
-  authoring machine carries eight extensions, three of which came from unrelated work, so
-  reading its `azd extension list` would have produced a number no reader would ever see.
-- **`evidence/help/` grew to 52 captures.** `azd 1.31.0` renamed `azd extension upgrade` to
+  `azure.ai.connections` is no longer pulled in. Asking for the verified `1.0.0-beta.9` by
+  name brings the same three, so this is **not** a change in the extension — it happens on the
+  registry side. Whether `azure.ai.connections` returns on demand the way `azure.ai.toolboxes`
+  does is explicitly **not verified**, and it is flagged as the most likely way a lab breaks
+  on the newer row. The scratch config directory mattered: the authoring machine carries eight
+  extensions, three of which came from unrelated work, so reading its `azd extension list`
+  would have produced a number no reader would ever see.
+- **The pinned toolchain turns out to be only partly reproducible**, which matters because
+  every timing in this repo is quoted against it. `azd extension install --version` can pin
+  the agents extension back to the verified `1.0.0-beta.9`, but dependencies resolve to latest
+  regardless, so `azure.ai.projects` still arrives at `1.0.0-beta.6` instead of the recorded
+  `1.0.0-beta.5`. Recorded in [reference](docs/reference/README.md#the-pinned-toolchain-is-only-partly-reproducible)
+  rather than worked around.
+- **`evidence/help/` grew to 53 captures.** `azd 1.31.0` renamed `azd extension upgrade` to
   `azd extension update`, keeping the old name as an alias — and ten places in this repo tell
   a reader to run the old name while nothing in `evidence/` backed any of it, because the
   original 49 cover only `azd ai agent` and `azd ai toolbox`. The three new captures show the

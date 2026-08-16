@@ -23,7 +23,7 @@ are in. Content that does the wrong job for its layer belongs in a different lay
 1. **Never invent CLI output.** Every fenced block labelled *verified* was captured from a
    real run against real Azure. If you change a command, re-run it or mark the block as
    illustrative. Check the claim against [`evidence/help/`](evidence/) before you write it —
-   52 verbatim `--help` captures are the authority for every flag, default and subcommand.
+   53 verbatim `--help` captures are the authority for every flag, default and subcommand.
    **Capture through a pty — `script -qec '…' /dev/null`, never `>`.** azd's terminal output
    and its redirected output differ *in both directions*: a redirect drops the `Next:` guidance
    blocks entirely and adds spinner lines a reader never sees. Five wrong blocks in
