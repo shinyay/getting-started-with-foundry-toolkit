@@ -35,13 +35,13 @@ The local samples in this repo are here if you want to inspect them before scaff
 [Python](../../samples/python/02-tools/) and [C#](../../samples/csharp/02-tools/).
 
 > [!NOTE]
-> **Both tracks have now been walked against live Azure — Python three times, C# twice, on
-> 2026-08-13 and 2026-08-14.** The second C# walk covered **every section, §§ 1–7**, which
-> retired the last instruction in this repo that had never been run: § 5's C# fragment is now
-> captured output, not a sketch. What both walks found is folded in below, including **three
-> failures that happen only in C#**. Blocks are labelled with the track they were captured
-> from; where the same bytes came out of both, the summary says so. §§ 3, 6 and 7 are
-> language-agnostic — § 3's `doctor` output came out **byte-identical on both tracks**.
+> **Both tracks have now been walked against live Azure — Python four times, C# three times,
+> on 2026-08-13, 2026-08-14 and 2026-08-16.** The second C# walk covered **every section,
+> §§ 1–7**, which retired the last instruction in this repo that had never been run: § 5's C#
+> fragment is now captured output, not a sketch. What both walks found is folded in below,
+> including **three failures that happen only in C#**. Blocks are labelled with the track they
+> were captured from; where the same bytes came out of both, the summary says so. §§ 3, 6 and
+> 7 are language-agnostic — § 3's `doctor` output came out **byte-identical on both tracks**.
 
 > [!IMPORTANT]
 > **`init` nests a folder named after the sample, and every later command must run inside it.**
@@ -99,16 +99,12 @@ Next:
 
 </details>
 
-> [!WARNING]
-> **Two lines in the block above are known to have changed and have not been re-captured.**
-> `azd` 1.31.0 fixed duplicated punctuation in interactive prompts, so a message that already
-> ends in punctuation no longer gains a second mark. That affects
-> `? Select a Foundry project … uses.:` and `? How would you like to proceed?:` — the trailing
-> `:` after `.` and `?` is what the upstream fix removes. The exact new rendering is **not
-> reproduced here**, because this block can only be captured by answering the prompts at a
-> standalone terminal: `azd` does not prompt inside VS Code's integrated terminal, and it
-> does not prompt for an automated agent either. Everything else in the block is unaffected.
-> See [reference → newer than the verified toolchain](../reference/README.md#newer-than-the-verified-toolchain).
+> [!NOTE]
+> **The current prompts have now been re-captured at a standalone terminal.** On `azd` 1.31.1
+> they end in `uses.` and `proceed?`, with no added colon; the selected answers follow after a
+> space. The historical block above remains intact because it is a beta.9 capture rather than
+> a composite of two runs. The 2026-08-16 capture retained 9,498 escape sequences and confirms
+> the upstream punctuation fix exactly.
 
 Answer **Create a new Foundry project** to follow this lab; **Use an existing Foundry project**
 reuses the one Lab 03 left behind, if you kept it. Answer **Deploy as specified in azure.yaml**
@@ -130,6 +126,14 @@ entirely (remove from azure.yaml)**.
 > `xterm-256color` in both. The mechanism was not established; `TERM_PROGRAM=vscode` and
 > `VSCODE_INJECTION=1` are the only environment differences found. **Run `init` from a
 > standalone terminal**, or recover by hand — § 3 tells you what to check and what to set.
+
+> [!WARNING]
+> **If you set a custom `AZD_CONFIG_DIR`, verify the environment before provisioning.** In a
+> 2026-08-16 A/B, interactive `init` accepted all five answers under an isolated config but
+> persisted no environment; the identical standalone flow with the normal config wrote all
+> 11 expected values. This lab does not set `AZD_CONFIG_DIR`, so the ordinary path is
+> unaffected. See
+> [troubleshooting § 22](../reference/troubleshooting.md#22-interactive-init-loses-its-environment-under-azd_config_dir).
 
 > [!TIP]
 > **The first question's default has moved.** On 2026-08-14 the highlighted option was
@@ -337,10 +341,9 @@ azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 ```
 
 > [!WARNING]
-> **`doctor` will not catch it if that value is missing.** Run with the variable unset,
-> `doctor` still reports `(✓) manual env vars set` and the same `7 passed, 1 failed,
-> 5 skipped` — the failure surfaces later, in § 4, when the agent process starts. The `grep`
-> above is the check that works.
+> **Current `doctor` catches this value; older extension rows did not.** On the current row,
+> `manual env vars set` turns red and names `AZURE_AI_MODEL_DEPLOYMENT_NAME`. Keep the `grep`
+> because it is explicit and works on both rows, but do not ignore a red manual-env check.
 
 ### 4. Run locally
 
@@ -850,15 +853,19 @@ unchanged. What does not transfer is everything in between.
 > surface those tool spans was not tested on this walk.** Do not assume it from this note.
 
 > [!WARNING]
-> **The hosted C# agent throws once per request, after answering correctly.** Every
-> `HTTP 200` on this walk was followed a second or two later by
+> **The hosted C# agent can throw after a tool-backed response, after answering correctly.**
+> Every tool-backed `HTTP 200` on the 2026-08-14 walk was followed a second or two later by
 > `fail: …Agent365Exporter[0] Agent365Exporter: Unhandled export exception.
 > System.ArgumentException: An item with the same key has already been added.
 > Key: gen_ai.conversation.id` — 3 requests, 3 exceptions, always *after* the response. The
+> 2026-08-16 canary reproduced it on two tool-backed requests, but a fresh no-tool `pong`
+> request produced HTTP 200 with no exception, including a 40-second late log check. Current
+> evidence therefore scopes it to responses that exercise a tool, not every request. The
 > stack throws inside `ExportFormatter.MapAttributes` while **building** the span, before
 > anything is sent, so it is not a permissions or licensing problem and it does not depend on
 > your tenant. It never appears locally. Nothing you did causes it and nothing you write fixes
-> it; see the troubleshooting table.
+> it; see
+> [troubleshooting § 21](../reference/troubleshooting.md#21-agent365-and-a365-messages-in-hosted-logs).
 
 
 
@@ -981,17 +988,18 @@ If you see something else, jump to *If that didn't work* below.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `ERROR: no project exists; to create a new project, run 'azd init'` | You are in the folder you made with `mkdir`, not the one `init` nested inside it. | `cd` into the folder named in `init`'s `Copying template code from local path to:` line. See [§ 1](#1-scaffold-the-tools-sample). |
+| `ERROR: parsing GitHub URL … requires SAML SSO authorization for your token` | `azd` reused an active `gh` token for a public sample repository, but that token was not authorized for the repository owner's organization. Anonymous Git access to the same repository can still work. | Authorize the token, or clone the public sample anonymously and pass its local `azure.yaml` path to `azd ai agent init -m`. See [troubleshooting § 23](../reference/troubleshooting.md#23-public-github-sample-fetch-fails-with-saml-sso). |
 | `RESPONSE 404: SubscriptionNotFound` right after picking a subscription during `init` | The subscription the picker offered is not usable — check you did not pick a near-identically named sibling. Mechanism not established. | `azd env set AZURE_SUBSCRIPTION_ID <id>`, `azd env set AZURE_TENANT_ID <id>` and `azd env set AZURE_LOCATION <region>`. Setting only `AZURE_LOCATION`, as azd suggests, is not enough. |
 | `RESPONSE 404: NotFound / "Project not found"` from `azd deploy`, on a project that exists | Intermittent; seen once on an immediate redeploy. Cause not established. | Re-run `azd deploy` unchanged. It succeeded in 14 s. Confirm first with `az resource list -g <rg>` — if the project is listed, nothing is broken. See [§ 6](#6-deploy-it). |
 | `azd down` ends in `409 RequestConflict / provisioning state is not terminal` | `azd` reached the purge before Azure finished deleting. The group is gone; the account is soft-deleted. | Wait a few minutes, then `az cognitiveservices account purge -n cog-<random> -g rg-<name> -l <region>`. Verify with `az cognitiveservices account list-deleted` — `az group exists` returns `false` even while this is unresolved. See [§ 7](#7-clean-up). |
 | Your new tool from § 5 is ignored, and the log never names it | `azd ai agent run` starts the server in the foreground and has no reload flag, so it is still running the code you had when you started it. | Ctrl+C and re-run `azd ai agent run --no-client`. Confirm with `gen_ai.tool.definitions` — it should now list both tools. **C# has no such attribute**, and `OutputCount` will not catch this: the stale run scored `OutputCount=3` too. Ask something only the new tool can answer. See [§ 5](#5-add-your-own-tool). |
 | The agent never uses your tool | The name/description does not tell the model when to call it. | Make the docstring or C# description specific and action-oriented. Check what the model actually received in `gen_ai.tool.definitions` — see [§ 4](#4-run-locally). |
-| `ValueError: Model is required. Set via 'model' parameter or 'FOUNDRY_MODEL' environment variable.` | Nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME` — § 1's fifth question did not run, and `azd provision` never sets it. `azure.yaml` maps the variable through as `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, so the container receives an **empty string** rather than nothing, which is why this is a `ValueError` from the client and not a `KeyError`. `doctor` does not catch it. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then `azd ai agent run` again. |
+| `ValueError: Model is required. Set via 'model' parameter or 'FOUNDRY_MODEL' environment variable.` | Nothing set `AZURE_AI_MODEL_DEPLOYMENT_NAME` — § 1's fifth question did not run, and `azd provision` never sets it. `azure.yaml` maps the variable through as `value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}`, so the container receives an **empty string** rather than nothing, which is why this is a `ValueError` from the client and not a `KeyError`. Current `doctor` catches it; older extension rows did not. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then `azd ai agent run` again. |
 | **C#** — `System.ArgumentException: Argument is whitespace (Parameter 'model')`, thrown from `AsAIAgent` at `Program.cs` line 17 | The same empty string as the row above, reaching C# instead of Python. The sample's `?? "gpt-4o"` cannot save you: `??` tests for `null`, and an empty string is not null. Verified 2026-08-14. | Identical fix: `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`, then re-run. See [§ 2](#2-inspect-the-tool-definition). |
 | **C#** — `ManagedIdentityCredential authentication failed: All Managed Identity sources are unavailable … IMDSv2 probe failed` on every local `invoke` | Only on a machine with no Azure Instance Metadata Service — a laptop, or WSL. .NET's `DefaultAzureCredential` treats the IMDS **timeout** as a fatal error rather than "credential unavailable", so it stops instead of falling through to your `az login`. Python's does not, which is why only this track breaks. Costs 100 s before it fails. Deployed agents are unaffected: they have a real managed identity. | Restrict the chain to developer credentials for the local run only: `AZURE_TOKEN_CREDENTIALS=dev azd ai agent run --no-client`. Verified 2026-08-14 — the same invoke then answered in 9.020 s. |
 | A harmless question like `2+2` calls the tool | The tool description is too broad — or the previous question is still in the session. | Narrow when the tool should be used, and retest with `--new-session --new-conversation`. |
 | You cannot tell whether the tool ran | `invoke` never shows tool calls. | Read the `azd ai agent run` terminal locally, or `azd ai agent monitor` after deploying. **C#**: locally use the `OutputCount` on the `Response … completed` line — larger than 1 means a tool round-trip, though it will not say which. Hosted C# logs neither, so judge by the answer. See [§ 4](#4-run-locally). |
-| **C#**, hosted only — `fail: …Agent365Exporter[0] Agent365Exporter: Unhandled export exception. System.ArgumentException: An item with the same key has already been added. Key: gen_ai.conversation.id` | A defect in the transitive `Microsoft.OpenTelemetry` 1.0.0-beta.1 package, which reaches you through `Microsoft.Agents.AI.Foundry.Hosting`. It throws in `ExportFormatter.MapAttributes` while building the span — before anything is sent — so it is neither a tenant nor a permissions problem. Reproduced on 3 of 3 requests, 2026-08-14. | **Nothing, and nothing is broken.** It fires *after* the response is returned; every request still answered `HTTP 200` with the right result. Telemetry export is lost, which on the golden path was going nowhere anyway — see [§ 6](#6-deploy-it). |
+| **C#**, hosted only — `fail: …Agent365Exporter[0] Agent365Exporter: Unhandled export exception. System.ArgumentException: An item with the same key has already been added. Key: gen_ai.conversation.id` | A defect in the transitive `Microsoft.OpenTelemetry` package, which reaches you through `Microsoft.Agents.AI.Foundry.Hosting`. It throws in `ExportFormatter.MapAttributes` while building the span — before anything is sent — so it is neither a tenant nor a permissions problem. Reproduced on every measured tool-backed request; a measured no-tool request did not reproduce it. | **Nothing, and the response is not broken.** It fires *after* HTTP 200 with the right result. Telemetry export for that span is lost; see [§ 6](#6-deploy-it) and [troubleshooting § 21](../reference/troubleshooting.md#21-agent365-and-a365-messages-in-hosted-logs). |
 | Tool works locally but not after deploy | You changed source but did not redeploy, or cloud identity differs. | Run `azd deploy`; check `azd ai agent show --output json`. |
 
 Everything else: [troubleshooting](../reference/troubleshooting.md).

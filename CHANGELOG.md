@@ -40,10 +40,12 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
     [reference → newer than the verified toolchain](docs/reference/README.md#newer-than-the-verified-toolchain),
     which is the only file CI check 7 exempts and therefore the only file that *can* hold a
     version other than the canonical one.
-  - **The canonical version table was deliberately left alone.** It records the toolchain the
-    labs were *verified* on, and no lab has been re-walked. Bumping it would have propagated a
-    false "verified" claim into 13 files — check 7 enforces exactly that propagation — so the
-    honest move was to leave it and record the drift beside it.
+  - **The canonical version table was deliberately left alone.** At the time of this free
+    diff, no lab had been re-walked. A later current-row canary covered Labs 01–04, but Labs
+    05–10 still have not been walked on it; bumping the table would therefore propagate a
+    false whole-guide "verified" claim into 13 files. Check 7 enforces exactly that
+    propagation, so the honest move remains to record the partial canary beside the canonical
+    row.
 - **A clean-room install revealed a dependency change no changelog mentions.** Installing
   `azure.ai.agents` into a scratch `AZD_CONFIG_DIR` now brings **three** extensions, not five:
   `azure.ai.connections` is no longer pulled in. Asking for the verified `1.0.0-beta.9` by
@@ -174,13 +176,11 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   each progress line, the skip reason, the total and the success message. The page still tells
   readers to type `upgrade`, because that is the one spelling that also works on the `1.27.1`
   floor the guide claims to support.
-- **[Lab 04](docs/tutorial/04-add-tools.md)'s interactive `init` block now says which two of
-  its lines are stale.** `azd` 1.31.0 removed duplicated punctuation from interactive prompts,
-  which changes `…uses.:` and `…proceed?:`. The new rendering is **not** written out, because
-  that block can only be captured by answering prompts at a standalone terminal — `azd` will
-  not prompt in VS Code's integrated terminal or for an automated agent. Guessing the two
-  lines would have been indistinguishable from having run it, which is the one thing rule 1
-  forbids.
+- **[Lab 04](docs/tutorial/04-add-tools.md)'s interactive `init` prompts were re-captured at a
+  standalone terminal.** `azd` 1.31.0 removed duplicated punctuation, and the 2026-08-16
+  capture now proves the exact visible endings are `uses.` and `proceed?`, with no added
+  colon. The historical beta.9 block remains intact rather than mixing two runs; the current
+  capture retained 9,498 escape sequences.
 - **Two reference pages now point at the drift instead of silently disagreeing with reality.**
   `azd-cli.md` does not list the two new subcommands, and `infrastructure.md` quotes `--infra`
   help text that has since changed; both now carry a pointer rather than a rewrite, since
@@ -194,6 +194,29 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
   proposed `docs/README.md`, which does not exist.
 
 ### Verified
+
+- **Labs 01–04 canary-walked end to end on the current row, 2026-08-16** — `azd` 1.31.1,
+  agents beta.10, projects beta.6, live catalog samples and current unpinned dependencies.
+  Python basic, Python tools and C# tools all provisioned, ran locally, deployed, answered
+  remotely, passed deployed `doctor` at **11/0/2**, and were purged with both independent
+  teardown checks clean. The measured timings are in
+  [reference → current-row canary](docs/reference/README.md#current-row-canary--labs-0104).
+  The canary found drift, not a broken lifecycle:
+  - `doctor` now catches a missing `AZURE_AI_MODEL_DEPLOYMENT_NAME`, while still ignoring
+    subscription and location. Lab 02 now sets the model before its pre-spend check.
+  - Current unpinned Python dependencies changed storage, protocol and task-recovery startup
+    lines without changing readiness or request success.
+  - `eval generate` reached its 11m16s polling limit while the server job continued;
+    `eval run` resumed it and completed **13/15** in 5m26s.
+  - Interactive init under a custom `AZD_CONFIG_DIR` accepted every answer but persisted no
+    environment; the default-config A/B persisted all 11 values.
+  - A public C# sample URL failed because `azd` reused a `gh` token that required SAML
+    authorization; anonymous Git checkout plus the local manifest succeeded.
+  - Hosted Python's missing-`agents` A365 instrumentor warning did not prevent tracing,
+    managed identity or HTTP 200.
+  - The C# duplicate `gen_ai.conversation.id` exporter exception is narrower than first
+    documented: every measured tool-backed request reproduced it, while a fresh no-tool
+    request did not.
 
 - **Lab 04's C# track walked a second time, 2026-08-14 — §§ 1–7, closing the repo's last
   never-run instruction.** The first C# walk had skipped § 5, so the page still carried one
@@ -221,12 +244,14 @@ extensions are at `1.0.0-beta.*`, and every timing was measured on a specific da
     `APPLICATIONINSIGHTS_CONNECTION_STRING`, which is also why startup logs
     `AppInsightsConfigured=False`. **Whether wiring App Insights would surface the tool spans
     was not tested** and the page says so rather than guessing.
-  - **A reproducible upstream defect in the hosted C# agent.** Every request answered
-    `HTTP 200` and was then followed by `Agent365Exporter: Unhandled export exception.
+  - **A reproducible upstream defect in the hosted C# agent.** Every tool-backed request on
+    that walk answered `HTTP 200` and was then followed by
+    `Agent365Exporter: Unhandled export exception.
     System.ArgumentException: An item with the same key has already been added.
     Key: gen_ai.conversation.id` — 3 of 3 requests. It throws in `ExportFormatter.MapAttributes`
     while *building* the span, before anything is sent, so it is independent of tenant and
-    permissions. Now a troubleshooting row that tells the reader to do nothing.
+    permissions. The later no-tool A/B did not reproduce it, and the troubleshooting entry now
+    states that measured scope instead of generalizing to every HTTP 200.
   - **`--new-conversation` alone drops replayed history.** The same question cost 6989 ms with
     the previous exchange in the conversation and 2903 ms without it, while the session ID was
     unchanged. The page's tip to pass `--new-session --new-conversation` overstated what is

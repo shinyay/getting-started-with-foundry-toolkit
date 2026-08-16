@@ -101,7 +101,7 @@ azd ai agent sample list --language python --output json
 ```
 
 `-o, --output` accepts **only `json` and `text`**, and defaults to `text` — the form above.
-One entry of the 21, verbatim:
+One catalog entry, verbatim:
 
 ```json
 {
@@ -270,15 +270,20 @@ agent-framework-agent-basic-responses-dev  true      true      false
 A `must contain 'template' field` error means an **old extension** is trying to read a new
 unified manifest as an agent manifest. Fix the version, not the file.
 
-### 3. `env` — point at your subscription
+### 3. `env` — set the required values
 
 ```bash
 azd env set AZURE_SUBSCRIPTION_ID "$(az account show --query id -o tsv)"
 azd env set AZURE_LOCATION eastus2
+azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
 ```
 
 Command substitution keeps the ID out of your screen and your shell history. Fish users:
 `azd env set AZURE_SUBSCRIPTION_ID (az account show --query id -o tsv)`.
+
+The third value is the deployment name declared in this sample's `azure.yaml`. `provision`
+creates that deployment but still does not write the plain variable that `main.py` reads, so
+set it before `doctor` rather than waiting for the process to fail at § 6.
 
 Values land in `.azure/<env-name>/.env` — for this project,
 `.azure/agent-framework-agent-basic-responses-dev/.env`. azd creates it mode `0600`, and
@@ -340,17 +345,20 @@ Then re-run `azd ai agent doctor` to verify.
 ```
 </details>
 
-**This is the expected state here, not a problem.** `FOUNDRY_PROJECT_ENDPOINT` is the *only*
-red check, and it cannot be anything else — `azd provision` in the next step is what writes it.
+**This is the expected state here, not a problem.** With all three values from § 3 set,
+`FOUNDRY_PROJECT_ENDPOINT` is the *only* red check, and it cannot be anything else —
+`azd provision` in the next step is what writes it.
 If any check *above* it is red, stop and fix that one first; see
 [Lab 01 § 7](01-setup.md#7-verify-everything) for how the cascade works.
 
 > [!WARNING]
-> **`doctor` does not check the two values § 3 just set.** Verified 2026-08-12: running it
-> *before* `azd env set` gives the identical `6 passed, 1 failed, 6 skipped` — `manual env vars
-> set` stays green with `AZURE_SUBSCRIPTION_ID` and `AZURE_LOCATION` both unset. A clean
-> `doctor` means the *project* is sound, not that `provision` will succeed. That is what the
-> `init` output's `Set the missing values before running azd provision` line is for.
+> **Current `doctor` checks the model name, but still not the subscription or location.**
+> Re-walked 2026-08-16: omit `AZURE_AI_MODEL_DEPLOYMENT_NAME` and `manual env vars set` turns
+> red, naming that variable, for `5 passed, 2 failed, 6 skipped`. Set the model only, and the
+> output is byte-identical to setting all three values: `6 passed, 1 failed, 6 skipped`.
+> A clean `doctor` therefore proves the model reference is populated, but still does not prove
+> that `AZURE_SUBSCRIPTION_ID` or `AZURE_LOCATION` is usable. The `init` output's
+> `Set the missing values before running azd provision` lines remain the check for those two.
 
 <details>
 <summary>If instead you see <code>4 passed, 1 failed, 8 skipped</code> — no environment selected</summary>
@@ -515,23 +523,16 @@ Then re-run `azd ai agent doctor` to verify.
 that the last skip now reads *no connection resources declared* rather than *excluded by
 `--local-only`* — the check ran and found nothing to check.
 
-#### 🐛 Gotcha: the model name is *not* set for you
+#### Why § 3 set the model name
 
 `azure.yaml` declares `AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}` and
 `main.py` requires it — but `provision` only writes `AI_PROJECT_DEPLOYMENTS` (a JSON blob).
-The plain variable is left unset (`azd env get-values | grep -c AZURE_AI_MODEL_DEPLOYMENT_NAME`
-returns `0`), so the very next step crashes with a Python traceback ending in:
+The plain variable is left unset unless § 3 supplied it.
 
-```text
-RuntimeError: Model deployment name is not configured. Set AZURE_AI_MODEL_DEPLOYMENT_NAME or FOUNDRY_MODEL_NAME.
-Agent stopped.
-```
-
-Set it once, using the deployment name from `azure.yaml`:
-
-```bash
-azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini
-```
+Current `doctor` catches that omission: immediately after `provision`, the missing value
+produced `9 passed, 2 failed, 2 skipped`; setting it restored the verified
+`10 passed, 1 failed, 2 skipped` block above. Older extension rows did not catch it and the
+next step instead crashed with `RuntimeError: Model deployment name is not configured`.
 
 ### 6. `run` — the local loop
 
@@ -578,6 +579,15 @@ Next:
   tip: inspect the spec to learn the agent's exact payload
 ```
 </details>
+
+> [!NOTE]
+> **The startup block is a dependency snapshot, not a stable protocol contract.** The catalog
+> sample leaves its Python packages unpinned. Re-walked 2026-08-16, the same source logged
+> `FileResponseStore` instead of `InMemoryResponseProvider`, Responses protocol `2.1.0b1`
+> instead of `1.0.0b9`, and startup-recovery task messages instead of the older deferred
+> recovery line. It still reached the same `Running on http://0.0.0.0:8088` checkpoint and
+> served the local invoke. Use that readiness line to grade the lab; treat the internal class
+> and package-version lines above as the 2026-08-12 capture they are.
 
 Things worth noticing:
 
@@ -723,7 +733,7 @@ If you see something else, jump to *If that didn't work* below.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `RuntimeError: Model deployment name is not configured.` | `azd provision` never sets `AZURE_AI_MODEL_DEPLOYMENT_NAME`. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
+| `RuntimeError: Model deployment name is not configured.` | The § 3 model value was omitted; `azd provision` still never sets `AZURE_AI_MODEL_DEPLOYMENT_NAME`. Current `doctor` names the omission, but older extension rows did not. | Run `azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-5.4-mini`. |
 | `KeyError: 'FOUNDRY_PROJECT_ENDPOINT'` in a traceback, then `Agent stopped.` | You ran `azd ai agent run` before `azd provision`, so nothing has written the endpoint into your azd environment yet. `main.py` reads it with `os.environ[...]`, which raises rather than defaulting. | Run § 5 first. Confirm with `azd env get-values \| grep FOUNDRY_PROJECT_ENDPOINT`. Reproduced 2026-08-14. |
 | Large traceback mentioning `169.254.169.254` at **startup** | The OpenTelemetry Azure-VM resource detector, not authentication. | Ignore it. |
 | Large traceback mentioning `169.254.169.254` on **first invoke** | `DefaultAzureCredential` probed for a managed identity that does not exist on a laptop. | Ignore it — the next log line shows it falling back to `AzureCliCredential`. |

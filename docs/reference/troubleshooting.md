@@ -96,6 +96,10 @@ AI_PROJECT_DEPLOYMENTS="[{\"name\":\"gpt-5.4-mini\",\"model\":{…}}]"
 The plain variable is never populated. This is a genuine gap in the current preview, not a
 mistake on your side.
 
+Current `doctor` detects the omission under `manual env vars set` and names
+`AZURE_AI_MODEL_DEPLOYMENT_NAME`. Older extension rows left that check green, so the runtime
+error remains worth recognizing.
+
 ### Fix
 
 ```bash
@@ -199,8 +203,12 @@ azd ai agent eval generate --no-prompt \
   --gen-instruction "Generate 5 short factual questions a new developer would ask."
 ```
 
-> ⏱️ It is not hung. ✅ Measured **8m51s** to generate 15 cases plus a rubric. Use `--no-wait`
-> if you need the terminal back.
+> ⏱️ It may be running after the local command stops waiting. One measured run completed in
+> **8m51s**. On 2026-08-16, evaluator generation finished in 32 seconds but dataset generation
+> hit the CLI's **11m16s** polling limit; the command said the server job was still running and
+> exited successfully. Running `azd ai agent eval run` resumed that job for another **1m20s**
+> and then started the evaluation. Preserve `eval.yaml` and the generated state. Use
+> `--no-wait` when you intentionally do not want to poll.
 
 ---
 
@@ -578,7 +586,72 @@ contains only `AgentCardPath`.
 
 ---
 
-## 21. Collecting diagnostics
+## 21. Agent365 and A365 messages in hosted logs
+
+Two current hosted runtimes mention Agent365 even though these samples are ordinary Foundry
+hosted agents. The messages alone do not establish that either the application or the tenant
+is configured for Agent365:
+
+| Log text | What the measured run established | Action |
+|---|---|---|
+| **Python:** `Failed to set up A365 OpenAI Agents instrumentation` followed by `ModuleNotFoundError: No module named 'agents'` | The optional OpenAI Agents instrumentation could not load because this Agent Framework sample does not install that package. The next line was `Tracing configured successfully`; managed identity succeeded and the request returned HTTP 200. | Ignore it unless the agent request or the tracing setup itself fails. It does not mean you must enable Agent365 for this sample. |
+| **C#:** `Agent365Exporter: Unhandled export exception` / duplicate `gen_ai.conversation.id` | The exception occurs after a correct HTTP 200 while the exporter builds a span, before sending anything. It reproduced on every measured **tool-backed** request. A fresh no-tool request and a 40-second late log check produced no exception. | Do not retry or change tenant permissions for a response that already succeeded. Treat it as lost telemetry for that span and judge the request separately. |
+
+Neither message is evidence of a missing Agent365 license or tenant configuration. The first
+is an optional Python instrumentor import; the second is a C# exporter defect whose currently
+measured scope is tool-backed responses.
+
+---
+
+## 22. Interactive init loses its environment under `AZD_CONFIG_DIR`
+
+### Symptom
+
+Interactive `azd ai agent init` accepts all five answers and prints its `Next:` block, but
+`azd env get-values` using the same custom `AZD_CONFIG_DIR` cannot find the environment
+afterward.
+
+### Scope
+
+✅ Reproduced 2026-08-16 with `azd` 1.31.1. The same standalone-terminal flow using the normal
+config persisted all 11 expected values. A no-prompt scaffold under the isolated config also
+persisted its initial environment, so the measured regression is the combination of
+**interactive init + custom `AZD_CONFIG_DIR`**, not interactive init generally.
+
+### Fix
+
+Do not trust the final `Next:` block as proof of persistence. Before provisioning, run:
+
+```bash
+azd env get-values
+```
+
+If the environment is missing, the safest recovery is to rerun `init` in a new empty
+directory without the custom config. If isolation is required, recreate the no-prompt
+scaffold and set the values collected by the interactive flow manually before spending
+anything.
+
+---
+
+## 23. Public GitHub sample fetch fails with SAML SSO
+
+```text
+ERROR: parsing GitHub URL: rpc error: code = Unknown desc = The GitHub organization that
+owns this repository requires SAML SSO authorization for your token before it can be used.
+```
+
+✅ Reproduced 2026-08-16 before scaffolding. `azd` reused the active `gh` token while resolving
+a manifest in a **public** repository; that token was not SAML-authorized for the owning
+organization. Anonymous Git access to the same repository succeeded.
+
+Authorize the token if that is appropriate for your account. The verified fallback is to
+clone the public repository anonymously, then pass the checked-out local `azure.yaml` path to
+`azd ai agent init -m`. The CLI's own suggestion — *verify the URL points to a file* — is
+misleading in this case; the URL was valid.
+
+---
+
+## 24. Collecting diagnostics
 
 ```bash
 azd version
@@ -589,5 +662,5 @@ azd ai agent show --output json
 azd provision --debug           # verbose ARM output
 ```
 
-Report bugs at <https://github.com/microsoft/foundry-toolkit/issues> (~93 open at the time of
-writing — search first; many known issues are already tracked there).
+Report bugs at <https://github.com/microsoft/foundry-toolkit/issues>. Search first; many known
+issues are already tracked there.

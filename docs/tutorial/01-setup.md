@@ -2,13 +2,14 @@
 
 > ⏱️ **15 min** · 📋 **Requires:** Azure subscription · 💰 **$0** · ☁️ **Creates 0 Azure resources**
 
-Go from a clean machine to a working toolchain: the right `azd`, five extensions, both
-sign-ins, and `azd ai agent doctor` running.
+Go from a clean machine to a working toolchain: the right `azd`, the current agent extension
+set, both sign-ins, and `azd ai agent doctor` running.
 
 ## What you'll learn
 
 - Install the `azd` version that can read current Foundry Toolkit manifests.
-- Install the agent, inspector, projects and toolbox extensions.
+- Install the agent extension, understand its dependencies, and know when the toolbox
+  extension appears.
 - Sign in with both CLIs the labs use.
 - Read `doctor` output — its three groups, its cascade of skips, and its exit codes.
 
@@ -238,7 +239,7 @@ MCAPS-…                                   you@example.com
 Logged in to Azure as you@example.com
 ```
 
-Lab 02 asks for your **subscription ID**. You never have to read it — [Lab 02 § 3](02-first-agent.md#3-env--point-at-your-subscription)
+Lab 02 asks for your **subscription ID**. You never have to read it — [Lab 02 § 3](02-first-agent.md#3-env--set-the-required-values)
 pipes it straight into `azd`. To print it on its own:
 
 ```bash
@@ -357,7 +358,7 @@ Exit codes matter in automation:
 
 The samples default to **`gpt-5.4-mini`**, `GlobalStandard`, capacity `10`. Decide your region
 now — you will set it in
-[Lab 02 § 3](02-first-agent.md#3-env--point-at-your-subscription).
+[Lab 02 § 3](02-first-agent.md#3-env--set-the-required-values).
 
 | Variable | Controls | Set it when |
 |---|---|---|
@@ -387,9 +388,13 @@ toolchain, not an agent. Three commands:
 
 ```bash
 azd version                                              # ≥ 1.27.1
-azd extension list --installed                           # five extensions, all "Up to date"
+azd extension list --installed                           # clean install currently shows three
 az account show --query "{sub:name, user:user.name}" -o table   # signed in, correct subscription
 ```
+
+The extension count is not a fixed checkpoint: a clean install currently shows the three
+extensions captured in § 3, and `azure.ai.toolboxes` appears on first use. Compare names and
+versions with § 3 rather than grading the run by a number.
 
 > [!CAUTION]
 > **Do not paste bare `az account show` output into an issue, a PR or a chat.** It prints your

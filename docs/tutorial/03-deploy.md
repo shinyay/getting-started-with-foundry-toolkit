@@ -10,8 +10,8 @@ Deploy the local agent to Foundry, verify the hosted version, then destroy every
 > [`samples/python/01-hello-world`](../../samples/python/01-hello-world/), whose `azure.yaml`
 > sets `name: hello-world`. [Lab 02](02-first-agent.md) instead initialises the *catalog*
 > sample, which keeps its own name — and `init` never renames it. The commands, field names,
-> ordering and timings below are unaffected. Substitute four strings, three of which come from
-> your **azd environment name** rather than from the sample:
+> and ordering below are unaffected; timings vary by run. Substitute four strings, three of
+> which come from your **azd environment name** rather than from the sample:
 >
 > | On this page | Where yours comes from |
 > |---|---|
@@ -23,6 +23,11 @@ Deploy the local agent to Foundry, verify the hosted version, then destroy every
 > That is why this page's project is a four-letter string and Lab 02's is 32 characters long:
 > the environment was named `rdpy` when this was captured. See
 > [Lab 02 § 5](02-first-agent.md#5-provision--create-azure-resources).
+>
+> A 2026-08-16 canary re-walk used Lab 02's catalog agent on `azd` 1.31.1 and the current
+> extension row. Deploy, `show`, remote invoke, Trace ID correlation and the all-green
+> `doctor` shape all reproduced; current timings live in
+> [reference → Verified runs](../reference/README.md#current-row-canary--labs-0104).
 
 ## What you'll learn
 
@@ -259,6 +264,15 @@ azd ai agent monitor --follow
 > harmless `WARNING … Content type 'usage' is not supported yet. This is usually safe to
 > ignore.`
 
+> [!WARNING]
+> Current unpinned Python images may also print `Failed to set up A365 OpenAI Agents
+> instrumentation` followed by `ModuleNotFoundError: No module named 'agents'`. The same
+> 2026-08-16 session immediately logged `Tracing configured successfully`, acquired its
+> managed-identity token and completed the request with HTTP 200. This is an optional
+> instrumentation warning; it does not mean this sample requires an Agent365-enabled tenant.
+> See
+> [troubleshooting § 21](../reference/troubleshooting.md#21-agent365-and-a365-messages-in-hosted-logs).
+
 ### 4. `doctor` — check local and remote state
 
 ```bash
@@ -351,6 +365,15 @@ azd ai agent eval generate --no-prompt \
 One of `--gen-instruction`, `--gen-instruction-file`, `--config`, or both `--dataset` and
 `--evaluators` is **required** — a bare `eval generate` errors out.
 
+> [!WARNING]
+> **The command can stop waiting while its server jobs continue.** On 2026-08-16 evaluator
+> generation finished in 32 seconds, but dataset generation reached the CLI's 11m16s polling
+> limit. The command exited successfully, kept the job IDs and told the reader to run
+> `azd ai agent eval run`; that command resumed the same dataset for another 1m20s before
+> starting the evaluation. Do not delete the generated state or start over unless the CLI
+> explicitly reports a failed job. See
+> [troubleshooting § 7](../reference/troubleshooting.md#7-eval-generate-refuses-to-run).
+
 Generated artifacts:
 
 ```text
@@ -381,8 +404,12 @@ options:
 max_samples: 15
 ```
 
-The dataset is **LLM-authored from your agent's own description** — each row is a test
-*intent*, not a hard-coded string:
+The generated file above is the 2026-08-09 shape. The 2026-08-16 run also wrote
+`agent.version: "1"`.
+
+Generation behavior is version-sensitive. On the current row, the 15-row dataset and rubric
+followed the supplied five-question **generation instruction**, not the agent description.
+Each row is still a test *intent*, not a hard-coded string:
 
 ```json
 {
@@ -428,12 +455,13 @@ Per-criteria results:
 </details>
 
 > [!IMPORTANT]
-> **9 of 15 is the real result, and 6 failures is not a broken sample.** The rubric `eval generate`
-> wrote grades identity fidelity; the sample's instruction is only *"You are a friendly assistant"*.
-> The gap between the rubric and the instruction **is** the finding. Chasing a green score by
-> weakening the rubric would defeat the purpose.
+> **9 of 15 is the real result for this captured run, not a fixed pass target.** Its generated
+> rubric grades identity fidelity while the sample says only *"You are a friendly assistant"*.
+> The 2026-08-16 catalog-agent run generated different assets and finished **13 of 15** after
+> the resume described above. Compare the same saved suite across agent changes; comparing two
+> newly generated suites measures both the agent and a moving test.
 
-The point is that you now have a **repeatable number** to move. Full walkthrough:
+With the generated suite saved, you now have a **repeatable number** to move. Full walkthrough:
 [Lab 06 — Evaluate](06-evaluate.md).
 
 ```bash
@@ -477,7 +505,7 @@ SUCCESS: Your application was removed from Azure in 2 minutes 4 seconds.
 > A capture that cannot render cursor movement keeps every one of those lines; one measured
 > teardown wrote `Deleting resource group … (this can take several minutes)` **37** times.
 > Teardown timing varies widely: 1 m 46 s, 2 m 4 s, 2 m 21 s, 2 m 40 s and 3 m 51 s across five
-> measured runs.
+> measured runs. The current catalog-agent canary added **1 m 56 s**.
 
 Teardown is not finished because the command said `SUCCESS`. Verify it:
 

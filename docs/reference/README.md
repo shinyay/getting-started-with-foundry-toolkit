@@ -17,7 +17,7 @@ Fifteen pages, grouped by what you are trying to do.
 |---|---|
 | [`glossary.md`](glossary.md) | **every term in one place** — read this if a word is unfamiliar ⭐ |
 | [`ecosystem.md`](ecosystem.md) | the four products, their repos, and which docs to trust |
-| [`troubleshooting.md`](troubleshooting.md) | 16 real failures with real fixes ⭐ |
+| [`troubleshooting.md`](troubleshooting.md) | real failure text, its scope and the fix that worked ⭐ |
 
 ### 📐 The contract — what you write
 
@@ -74,8 +74,9 @@ Fifteen pages, grouped by what you are trying to do.
 > toolchain it was *verified on* and must not be edited to claim a newer one. CI check 7
 > enforces that, and exempts only this file.
 
-Measured **2026-08-15**. The labs have **not** been re-walked, so every ✅ Verified block
-elsewhere in this repository still describes the row it was captured on.
+Measured **2026-08-15**, then canary-walked through Labs 01–04 on **2026-08-16**. Historical
+✅ Verified blocks elsewhere still describe the row and date in their summaries; the current
+row is recorded separately below rather than spliced into those captures.
 
 | | Verified on | Installed when measured |
 |---|---|---|
@@ -188,12 +189,50 @@ Every number here came from a real run against live Azure, then destroyed. Nothi
 | Resources created | **2** | **2** | **2** | **2** | **2** | **2** | **2** | not measured | not measured |
 | RG-scope role assignments | **0** | **0** | **0** | **0** | not measured | not measured | not measured | not measured | not measured |
 
+### Current-row canary — Labs 01–04
+
+This is the compatibility canary, not a new canonical row. It used `azd` **1.31.1**,
+`azure.ai.agents` **1.0.0-beta.10**, `azure.ai.projects` **1.0.0-beta.6**, the live catalog
+samples and current unpinned sample dependencies.
+
+| | Python catalog `01-basic` | Python catalog `02-tools` | C# catalog `02-tools` |
+|---|---|---|---|
+| Date | **2026-08-16** | **2026-08-16** | **2026-08-16** |
+| `azd provision` | **1m20s** | **1m15s** | **1m21s** |
+| `azd deploy` | **1m56s** | **1m53s** | **2m33s** |
+| First `invoke --local` | **13.164s** (first byte 13.163s) | weather: **22.810s** | hotels: **10.349s** |
+| Added-tool `invoke --local` | — | stock: **17.855s** | stale server: **4.720s** → restarted: **12.622s** |
+| First remote `invoke` | **17.363s** (first byte 8.107s) | weather: **23.526s** (first byte 7.953s) | room rate: **5.945s** (first byte 3.409s) |
+| Added-tool remote `invoke` | — | stock: **20.537s** (first byte 7.420s) | second room rate: **5.286s** (first byte 3.211s) |
+| `eval generate` | evaluator **32s**; dataset polling timed out at **11m16s** | — | — |
+| `eval run` | resumed dataset **1m20s**, then run **5m26s** → 15 cases, **13 passed**, 2 failed | — | — |
+| Deployed `doctor` | **11 passed, 0 failed, 2 skipped** | **11 passed, 0 failed, 2 skipped** | **11 passed, 0 failed, 2 skipped** |
+| `azd down --force --purge` | **1m56s** | **2m10s** | **1m55s** |
+| Independent teardown checks | group absent; no matching soft-deleted account | group absent; no matching soft-deleted account | group absent; no matching soft-deleted account |
+
+All three primary paths completed and were destroyed. The canary found **compatibility drift**
+and two bounded regressions, not a lifecycle break: current `doctor` now catches the missing
+model variable; generated evaluation assets and unpinned Python runtime logs changed;
+interactive `init` failed to persist state only under a custom `AZD_CONFIG_DIR`; and a public
+sample fetch failed only when `azd` reused a `gh` token that required SAML authorization.
+Lab 04's Python and C# tool behavior still worked locally and remotely.
+
+The raw captures are retained as private working evidence because they contain subscription,
+resource, session and trace identifiers. The two tools-track `deploy` captures had degraded
+live-table rendering, so their `SUCCESS` timings support this ledger but do **not** replace a
+✅ Verified terminal block.
+
+The Fast facts row remains on 1.30.0 / beta.9 until Labs 05–10 are walked too. Raising it now
+would turn partial canary coverage into a repository-wide claim that the whole guide was
+verified on the newer row.
+
 The 2026-08-12 column is a **reproducibility re-run** on a byte-identical toolchain (`azd 1.30.0`,
 all five extensions unchanged), following [Lab 02](../tutorial/02-first-agent.md) and
 [Lab 03](../tutorial/03-deploy.md) exactly as written rather than using this repository's own
 samples. Every timing landed within noise of the original. It also closed the repo's last
 uncaptured tutorial block — `invoke --local` — and corrected four claims; see the
-[changelog](../../CHANGELOG.md). Labs 04–10 were **not** re-run.
+[changelog](../../CHANGELOG.md). That statement describes the 2026-08-12 run; the current-row
+canary above later covered Labs 01–04. Labs 05–10 remain to be re-walked.
 
 > [!IMPORTANT]
 > **That re-run was captured through a redirect, and a redirect hides things.** A later
@@ -275,7 +314,7 @@ was not run on that walk; teardown was confirmed with `az group exists` and
 `az cognitiveservices account list-deleted` instead.
 
 **Teardown timing is the one number you should not trust to a single run.** Provision and
-deploy have held within a few seconds across every run in this table; the nine completed
+deploy have held within a few seconds across every run in this table; the twelve completed
 `azd down --force --purge` runs recorded on this page span **1m45s to 4m1s** — the slowest is
 more than twice the fastest — and one more did not complete at all, failing at the purge step
 with `409 RequestConflict`. It waits on resource-group deletion and a Cognitive Services purge,
@@ -300,9 +339,10 @@ doubt:
 | [Lab 03](../tutorial/03-deploy.md) § 5 `eval` | `3m43s` run | Captured 2026-08-09, same reason. |
 
 These are **not** relabelled illustrative: each was captured from a real run, and saying
-otherwise would be its own false claim. What is missing is the artefact that would let a
-reader re-check it. Closing the gap needs a billed Azure run of Labs 02 and 03 with
-`script -qec` captures kept alongside the existing ones.
+otherwise would be its own false claim. The 2026-08-16 canary retained current-row
+counterparts for all six command paths, so their present behavior is now re-checkable. It
+cannot retroactively create the missing bytes from the historical `hello-world` runs, so this
+table remains as a provenance gap rather than pretending the newer captures are the old ones.
 
 > [!TIP]
 > The audit also found that the checker used to enforce all this had been reading
@@ -329,8 +369,9 @@ What to take from this:
   [deploy modes](deploy-modes.md).
 - **Under 5 minutes, cold to serving.** Both languages. Rebuilding an environment is cheap, so
   there is no reason to leave one running.
-- **Evaluation is not a 5-minute add-on.** `eval generate` alone took **8m51s** — longer than
-  provision, deploy and the eval run *combined*. Budget for it. See [Lab 06](../tutorial/06-evaluate.md).
+- **Evaluation is not a 5-minute add-on.** One run took **8m51s**; the current-row canary hit
+  the CLI's **11m16s** polling limit while the dataset job kept running, then resumed it from
+  `eval run`. Budget for it and preserve generated state. See [Lab 06](../tutorial/06-evaluate.md).
 - **Timings vary ±20% run to run.** The Python run was *faster* to provision and deploy but
   *slower* on first invoke — with a single sample each, that is noise, not a language ranking.
   Treat these as orders of magnitude, not benchmarks.
